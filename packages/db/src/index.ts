@@ -5,19 +5,17 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-const prismaOptions = {
-  log:
-    process.env.NODE_ENV === 'production'
-      ? (['error', 'warn'] as const)
-      : (['query', 'info', 'warn', 'error'] as const),
-};
+const isProd = process.env.NODE_ENV === 'production';
+const logLevels: Array<'query' | 'info' | 'warn' | 'error'> = isProd
+  ? ['error', 'warn']
+  : ['query', 'info', 'warn', 'error'];
 
 export const prisma: PrismaClient =
-  global.__prisma ?? new PrismaClient(prismaOptions);
+  global.__prisma ?? new PrismaClient({ log: logLevels });
 
 if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;
 }
 
 export * from '@prisma/client';
-export default prisma;
+e
