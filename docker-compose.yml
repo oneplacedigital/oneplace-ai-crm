@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: oneplace_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oneplace
+      POSTGRES_PASSWORD: oneplace
+      POSTGRES_DB: oneplace_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - oneplace_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oneplace -d oneplace_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: oneplace_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - oneplace_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Uncomment after first successful local boot to run API in container
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/api/Dockerfile
+  #   container_name: oneplace_api
+  #   restart: unless-stopped
+  #   environment:
+  #     DATABASE_URL: postgresql://oneplace:oneplace@postgres:5432/oneplace_crm?schema=public
+  #     NODE_ENV: production
+  #     API_PORT: 4000
+  #   ports:
+  #     - "4000:4000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  oneplace_pg_data:
+  oneplace_redis_data:

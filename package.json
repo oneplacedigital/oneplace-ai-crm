@@ -1,0 +1,36 @@
+{
+  "name": "oneplace-ai-crm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ONEPLACE AI CRM — AI Admissions CRM + Marketing Automation Platform",
+  "author": "OnePlace Digital Academy <oneplacedigitalacademy@gmail.com>",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @oneplace/db prisma:generate",
+    "db:migrate": "pnpm --filter @oneplace/db prisma:migrate",
+    "db:push": "pnpm --filter @oneplace/db prisma:push",
+    "db:seed": "pnpm --filter @oneplace/db seed",
+    "db:studio": "pnpm --filter @oneplace/db prisma:studio",
+    "api:dev": "pnpm --filter @oneplace/api dev",
+    "web:dev": "pnpm --filter @oneplace/web dev",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.6",
+    "typescript": "^5.5.3",
+    "prettier": "^3.3.2",
+    "@types/node": "^20.14.10"
+  }
+}

@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+.next
+.turbo
+out
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Prisma
+packages/db/prisma/migrations/dev.db*
+
+# IDE
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Misc
+coverage
+.cache
+*.tsbuildinfo
+.eslintcache
+
+# Local env (never push)
+.env
+.env.local
+apps/*/.env
+apps/*/.env.local
+

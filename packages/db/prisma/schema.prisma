@@ -1,0 +1,392 @@
+// ============================================
+// ONEPLACE AI CRM — Prisma schema
+// Multi-tenant: every business table carries tenantId
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN    // OnePlace platform owner
+  TENANT_ADMIN   // Institute owner
+  MANAGER        // Branch/sales manager
+  COUNSELOR      // Admissions counselor
+  VIEWER         // Read-only
+}
+
+enum TenantPlan {
+  TRIAL
+  STARTER
+  GROWTH
+  PRO
+  ENTERPRISE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  QUALIFIED
+  DEMO_SCHEDULED
+  DEMO_COMPLETED
+  ADMISSION_CONFIRMED
+  PAYMENT_COMPLETED
+  LOST
+  COLD
+}
+
+enum LeadSource {
+  META_ADS
+  GOOGLE_ADS
+  ORGANIC_SEARCH
+  REFERRAL
+  WALK_IN
+  WEBSITE_FORM
+  WHATSAPP
+  PHONE_CALL
+  IMPORT
+  MANUAL
+  OTHER
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  WHATSAPP_SENT
+  WHATSAPP_RECEIVED
+  EMAIL_SENT
+  EMAIL_RECEIVED
+  DEMO_SCHEDULED
+  DEMO_COMPLETED
+  STATUS_CHANGE
+  ASSIGNMENT_CHANGE
+  PAYMENT_LOGGED
+  AI_SUGGESTION
+  META_EVENT_SENT
+  SYSTEM
+}
+
+enum CoursePace {
+  WEEKDAY
+  WEEKEND
+  EVENING
+  ONLINE
+  HYBRID
+}
+
+enum WebhookProvider {
+  META_LEAD_ADS
+  META_CONVERSIONS
+  WHATSAPP_CLOUD
+  OTHER
+}
+
+enum WorkflowTrigger {
+  LEAD_CREATED
+  LEAD_STATUS_CHANGED
+  LEAD_NO_RESPONSE_24H
+  LEAD_ASSIGNED
+}
+
+enum WorkflowActionType {
+  SEND_WHATSAPP_TEMPLATE
+  ASSIGN_COUNSELOR
+  SET_FOLLOWUP
+  SET_STATUS
+  SEND_META_EVENT
+  NOTIFY_COUNSELOR
+}
+
+enum WorkflowRunStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+// --- CORE MODELS ---------------------------------------------------------
+
+model Tenant {
+  id              String      @id @default(cuid())
+  slug            String      @unique
+  name            String
+  email           String      @unique
+  phone           String?
+  city            String?     @default("Nashik")
+  country         String?     @default("IN")
+  plan            TenantPlan  @default(TRIAL)
+  isActive        Boolean     @default(true)
+
+  // Meta integration (encrypted at rest)
+  metaPixelId     String?
+  metaAccessToken String?     @db.Text   // AES-256-GCM ciphertext
+  metaAdAccountId String?
+
+  // WhatsApp Cloud API (encrypted at rest)
+  whatsappPhoneId String?
+  whatsappBizId   String?
+  whatsappToken   String?     @db.Text   // AES-256-GCM ciphertext
+
+  // Branding
+  brandColor      String?     @default("#DB0000")
+  logoUrl         String?
+  timezone        String      @default("Asia/Kolkata")
+
+  // Lifecycle
+  trialEndsAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  users           User[]
+  leads           Lead[]
+  activities      LeadActivity[]
+  courses         Course[]
+  auditLogs       AuditLog[]
+  workflows       Workflow[]
+  workflowRuns    WorkflowRun[]
+
+  @@index([slug])
+  @@map("tenants")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  tenantId      String
+  email         String
+  phone         String?
+  name          String
+  passwordHash  String
+  role          UserRole  @default(COUNSELOR)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedLeads Lead[]    @relation("AssignedCounselor")
+  activities    LeadActivity[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  userAgent   String?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Course {
+  id            String     @id @default(cuid())
+  tenantId      String
+  name          String
+  code          String?
+  description   String?    @db.Text
+  durationWeeks Int        @default(12)
+  feeInr        Int        @default(0)
+  pace          CoursePace @default(WEEKDAY)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leads         Lead[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("courses")
+}
+
+model Lead {
+  id              String      @id @default(cuid())
+  tenantId        String
+
+  // Identity
+  fullName        String
+  email           String?
+  phone           String
+  whatsapp        String?
+  city            String?     @default("Nashik")
+
+  // Lifecycle
+  status          LeadStatus  @default(NEW)
+  source          LeadSource  @default(MANUAL)
+  sourceDetail    String?
+  score           Int         @default(0)   // 0-100
+  priority        Int         @default(2)   // 1=hot, 2=warm, 3=cold
+
+  // Assignment
+  assignedToId    String?
+
+  // Course interest
+  courseId        String?
+  budgetInr       Int?
+  expectedJoinAt  DateTime?
+
+  // Meta integration tracking
+  metaLeadId      String?     @unique
+  metaCampaignId  String?
+  metaAdsetId     String?
+  metaAdId        String?
+  fbclid          String?
+  metaEventLastSent DateTime?
+  metaEventLastStatus String?
+
+  // AI
+  aiSummary       String?     @db.Text
+  aiNextAction    String?     @db.Text
+  aiUpdatedAt     DateTime?
+
+  // Free-form
+  notes           String?     @db.Text
+  tags            String[]    @default([])
+
+  // Timestamps
+  lastContactedAt DateTime?
+  nextFollowUpAt  DateTime?
+  convertedAt     DateTime?
+  lostReason      String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedTo      User?       @relation("AssignedCounselor", fields: [assignedToId], references: [id], onDelete: SetNull)
+  course          Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  activities      LeadActivity[]
+  workflowRuns    WorkflowRun[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, assignedToId])
+  @@index([tenantId, source])
+  @@index([tenantId, nextFollowUpAt])
+  @@index([tenantId, createdAt])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id          String       @id @default(cuid())
+  tenantId    String
+  leadId      String
+  userId      String?
+  type        ActivityType
+  title       String
+  body        String?      @db.Text
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([leadId, createdAt])
+  @@index([tenantId, type])
+  @@map("lead_activities")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String?
+  entity      String
+  entityId    String
+  action      String
+  diff        Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, entity, entityId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+// --- WEBHOOK IDEMPOTENCY -------------------------------------------------
+
+model WebhookEvent {
+  id          String           @id @default(cuid())
+  provider    WebhookProvider
+  externalId  String
+  payload     Json
+  processedAt DateTime?
+  error       String?
+  createdAt   DateTime         @default(now())
+
+  @@unique([provider, externalId])
+  @@index([createdAt])
+  @@map("webhook_events")
+}
+
+// --- WORKFLOW AUTOMATION -------------------------------------------------
+
+model Workflow {
+  id          String          @id @default(cuid())
+  tenantId    String
+  name        String
+  isActive    Boolean         @default(true)
+  trigger     WorkflowTrigger
+  // Optional filter: only fire when status moves to one of these
+  triggerStatuses LeadStatus[] @default([])
+  // Actions executed in order (JSON: { type, params })
+  actions     Json
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runs        WorkflowRun[]
+
+  @@index([tenantId])
+  @@index([tenantId, trigger, isActive])
+  @@map("workflows")
+}
+
+model WorkflowRun {
+  id          String            @id @default(cuid())
+  tenantId    String
+  workflowId  String
+  leadId      String?
+  status      WorkflowRunStatus @default(PENDING)
+  result      Json?
+  error       String?
+  startedAt   DateTime          @default(now())
+  finishedAt  DateTime?
+
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflow    Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  lead        Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([workflowId])
+  @@index([leadId])
+  @@index([tenantId, status])
+  @@map("workflow_runs")
+}

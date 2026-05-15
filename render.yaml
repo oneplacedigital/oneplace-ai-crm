@@ -1,0 +1,47 @@
+# Render Blueprint — one-click deploy of the API.
+# Push this file to GitHub root, then on Render → "New" → "Blueprint" → pick repo.
+services:
+  - type: web
+    name: oneplace-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        # MUST be base64 of 32 bytes — Render's generateValue gives 32 chars hex (~16 bytes).
+        # Replace this with: openssl rand -base64 32  (44 chars ending in =)
+        sync: false
+      - key: DATABASE_URL
+        sync: false   # paste from Neon
+      - key: CORS_ORIGIN
+        sync: false   # paste your Vercel URL after frontend deploys
+      - key: META_VERIFY_TOKEN
+        value: oneplace-verify-token
+      - key: WHATSAPP_VERIFY_TOKEN
+        value: oneplace-wa-verify
+      - key: META_GRAPH_VERSION
+        value: v19.0
+      - key: META_APP_SECRET
+        sync: false
+      - key: AI_ENABLED
+        value: "false"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gpt-4o-mini
+      - key: BCRYPT_ROUNDS
+        value: "12"
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX
+        value: "300"
