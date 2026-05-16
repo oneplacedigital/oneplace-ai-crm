@@ -530,4 +530,3 @@ model EmailSequenceEnrollment {
   @@index([isActive, currentStep])
   @@map("email_sequence_enrollments")
 }
-                            
