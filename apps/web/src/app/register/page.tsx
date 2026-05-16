@@ -64,7 +64,6 @@ export default function RegisterPage() {
     setLicenseInfo(null);
     setLicenseError(null);
     return undefined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.licenseCode]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -91,7 +90,7 @@ export default function RegisterPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <form onSubmit={onSubmit} className="card w-full max-w-lg space-y-4 p-8">
         <div>
-          <h1 className="text-2xl font-bold text-navy-500">Create your Pipely workspace</h1>
+          <h1 className="text-2xl font-bold text-ink-500">Create your Pipely workspace</h1>
           <p className="text-sm text-slate-500">
             14-day trial. No card required. Have a license code? Enter below for premium access.
           </p>
@@ -101,7 +100,7 @@ export default function RegisterPage() {
           <label className="text-xs font-semibold text-slate-500">License Code (optional)</label>
           <input
             className="input font-mono"
-            placeholder="e.g. ONEPLACE-MAY-2026"
+            placeholder="e.g. ONEPLACE-STUDENT-DEMO"
             value={form.licenseCode}
             onChange={update('licenseCode')}
           />
@@ -129,13 +128,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500">URL Slug</label>
-            <input
-              className="input"
-              required
-              placeholder="oneplace"
-              value={form.tenantSlug}
-              onChange={update('tenantSlug')}
-            />
+            <input className="input" required placeholder="oneplace" value={form.tenantSlug} onChange={update('tenantSlug')} />
           </div>
         </div>
 
@@ -152,25 +145,12 @@ export default function RegisterPage() {
 
         <div>
           <label className="text-xs font-semibold text-slate-500">Admin Email</label>
-          <input
-            type="email"
-            className="input"
-            required
-            value={form.adminEmail}
-            onChange={update('adminEmail')}
-          />
+          <input type="email" className="input" required value={form.adminEmail} onChange={update('adminEmail')} />
         </div>
 
         <div>
           <label className="text-xs font-semibold text-slate-500">Password (min 8 chars)</label>
-          <input
-            type="password"
-            className="input"
-            required
-            minLength={8}
-            value={form.password}
-            onChange={update('password')}
-          />
+          <input type="password" className="input" required minLength={8} value={form.password} onChange={update('password')} />
         </div>
 
         {error && (
@@ -187,4 +167,9 @@ export default function RegisterPage() {
           Already have an account?{' '}
           <Link href="/login" className="font-semibold text-brand hover:underline">
             Sign in
-          </
+          </Link>
+        </p>
+      </form>
+    </main>
+  );
+}
