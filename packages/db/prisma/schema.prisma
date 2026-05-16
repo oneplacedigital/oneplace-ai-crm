@@ -1,8 +1,3 @@
-// ============================================
-// ONEPLACE AI CRM — Prisma schema
-// Multi-tenant: every business table carries tenantId
-// ============================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,11 +10,11 @@ datasource db {
 // --- ENUMS ---------------------------------------------------------------
 
 enum UserRole {
-  SUPER_ADMIN    // OnePlace platform owner
-  TENANT_ADMIN   // Institute owner
-  MANAGER        // Branch/sales manager
-  COUNSELOR      // Admissions counselor
-  VIEWER         // Read-only
+  SUPER_ADMIN
+  TENANT_ADMIN
+  MANAGER
+  COUNSELOR
+  VIEWER
 }
 
 enum TenantPlan {
@@ -86,6 +81,7 @@ enum WebhookProvider {
   META_LEAD_ADS
   META_CONVERSIONS
   WHATSAPP_CLOUD
+  RESEND
   OTHER
 }
 
@@ -98,6 +94,8 @@ enum WorkflowTrigger {
 
 enum WorkflowActionType {
   SEND_WHATSAPP_TEMPLATE
+  SEND_EMAIL
+  START_EMAIL_SEQUENCE
   ASSIGN_COUNSELOR
   SET_FOLLOWUP
   SET_STATUS
@@ -112,6 +110,45 @@ enum WorkflowRunStatus {
   SKIPPED
 }
 
+enum LicenseStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+  REVOKED
+}
+
+enum EmailSendStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  FAILED
+  UNSUBSCRIBED
+}
+
+// --- LICENSE / SUBSCRIPTION ----------------------------------------------
+
+model LicenseKey {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  name            String?
+  plan            TenantPlan     @default(TRIAL)
+  status          LicenseStatus  @default(ACTIVE)
+  validForDays    Int            @default(30)
+  maxRedemptions  Int            @default(1)
+  redeemedCount   Int            @default(0)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  expiresAt       DateTime?
+  redeemedTenants Tenant[]
+
+  @@index([code])
+  @@index([status])
+  @@map("license_keys")
+}
+
 // --- CORE MODELS ---------------------------------------------------------
 
 model Tenant {
@@ -124,27 +161,33 @@ model Tenant {
   country         String?     @default("IN")
   plan            TenantPlan  @default(TRIAL)
   isActive        Boolean     @default(true)
+  isSuspended     Boolean     @default(false)
+  suspendedReason String?
 
-  // Meta integration (encrypted at rest)
+  licenseKeyId     String?
+  licenseExpiresAt DateTime?
+
   metaPixelId     String?
-  metaAccessToken String?     @db.Text   // AES-256-GCM ciphertext
+  metaAccessToken String?     @db.Text
   metaAdAccountId String?
 
-  // WhatsApp Cloud API (encrypted at rest)
   whatsappPhoneId String?
   whatsappBizId   String?
-  whatsappToken   String?     @db.Text   // AES-256-GCM ciphertext
+  whatsappToken   String?     @db.Text
 
-  // Branding
-  brandColor      String?     @default("#DB0000")
+  emailFromAddress String?    @default("noreply@pipely.in")
+  emailFromName    String?    @default("Pipely")
+  emailReplyTo     String?
+
+  brandColor      String?     @default("#6366F1")
   logoUrl         String?
   timezone        String      @default("Asia/Kolkata")
 
-  // Lifecycle
   trialEndsAt     DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  licenseKey      LicenseKey? @relation(fields: [licenseKeyId], references: [id])
   users           User[]
   leads           Lead[]
   activities      LeadActivity[]
@@ -152,8 +195,12 @@ model Tenant {
   auditLogs       AuditLog[]
   workflows       Workflow[]
   workflowRuns    WorkflowRun[]
+  emailTemplates  EmailTemplate[]
+  emailSends      EmailSend[]
+  emailSequences  EmailSequence[]
 
   @@index([slug])
+  @@index([licenseKeyId])
   @@map("tenants")
 }
 
@@ -225,29 +272,24 @@ model Lead {
   id              String      @id @default(cuid())
   tenantId        String
 
-  // Identity
   fullName        String
   email           String?
   phone           String
   whatsapp        String?
   city            String?     @default("Nashik")
 
-  // Lifecycle
   status          LeadStatus  @default(NEW)
   source          LeadSource  @default(MANUAL)
   sourceDetail    String?
-  score           Int         @default(0)   // 0-100
-  priority        Int         @default(2)   // 1=hot, 2=warm, 3=cold
+  score           Int         @default(0)
+  priority        Int         @default(2)
 
-  // Assignment
   assignedToId    String?
 
-  // Course interest
   courseId        String?
   budgetInr       Int?
   expectedJoinAt  DateTime?
 
-  // Meta integration tracking
   metaLeadId      String?     @unique
   metaCampaignId  String?
   metaAdsetId     String?
@@ -256,16 +298,15 @@ model Lead {
   metaEventLastSent DateTime?
   metaEventLastStatus String?
 
-  // AI
   aiSummary       String?     @db.Text
   aiNextAction    String?     @db.Text
   aiUpdatedAt     DateTime?
 
-  // Free-form
   notes           String?     @db.Text
   tags            String[]    @default([])
 
-  // Timestamps
+  unsubscribedAt  DateTime?
+
   lastContactedAt DateTime?
   nextFollowUpAt  DateTime?
   convertedAt     DateTime?
@@ -278,6 +319,8 @@ model Lead {
   course          Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
   activities      LeadActivity[]
   workflowRuns    WorkflowRun[]
+  emailSends      EmailSend[]
+  sequenceEnrollments EmailSequenceEnrollment[]
 
   @@unique([tenantId, phone])
   @@index([tenantId])
@@ -330,8 +373,6 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// --- WEBHOOK IDEMPOTENCY -------------------------------------------------
-
 model WebhookEvent {
   id          String           @id @default(cuid())
   provider    WebhookProvider
@@ -346,23 +387,19 @@ model WebhookEvent {
   @@map("webhook_events")
 }
 
-// --- WORKFLOW AUTOMATION -------------------------------------------------
-
 model Workflow {
-  id          String          @id @default(cuid())
-  tenantId    String
-  name        String
-  isActive    Boolean         @default(true)
-  trigger     WorkflowTrigger
-  // Optional filter: only fire when status moves to one of these
-  triggerStatuses LeadStatus[] @default([])
-  // Actions executed in order (JSON: { type, params })
-  actions     Json
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  tenantId        String
+  name            String
+  isActive        Boolean         @default(true)
+  trigger         WorkflowTrigger
+  triggerStatuses LeadStatus[]    @default([])
+  actions         Json
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  runs        WorkflowRun[]
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runs            WorkflowRun[]
 
   @@index([tenantId])
   @@index([tenantId, trigger, isActive])
@@ -390,3 +427,107 @@ model WorkflowRun {
   @@index([tenantId, status])
   @@map("workflow_runs")
 }
+
+// --- EMAIL AUTOMATION ----------------------------------------------------
+
+model EmailTemplate {
+  id          String       @id @default(cuid())
+  tenantId    String
+  name        String
+  subject     String
+  bodyHtml    String       @db.Text
+  bodyText    String?      @db.Text
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sends       EmailSend[]
+  sequenceSteps EmailSequenceStep[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("email_templates")
+}
+
+model EmailSend {
+  id            String          @id @default(cuid())
+  tenantId      String
+  leadId        String?
+  templateId    String?
+  toEmail       String
+  fromEmail     String
+  subject       String
+  bodyHtml      String          @db.Text
+  status        EmailSendStatus @default(QUEUED)
+  providerId    String?
+  errorMessage  String?
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+  openedAt      DateTime?
+  clickedAt     DateTime?
+  metadata      Json?
+  createdAt     DateTime        @default(now())
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead          Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  template      EmailTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([leadId])
+  @@index([scheduledFor])
+  @@map("email_sends")
+}
+
+model EmailSequence {
+  id          String          @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  steps       EmailSequenceStep[]
+  enrollments EmailSequenceEnrollment[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("email_sequences")
+}
+
+model EmailSequenceStep {
+  id          String          @id @default(cuid())
+  sequenceId  String
+  templateId  String
+  delayHours  Int             @default(24)
+  order       Int
+
+  sequence    EmailSequence   @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  template    EmailTemplate   @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@unique([sequenceId, order])
+  @@index([sequenceId])
+  @@map("email_sequence_steps")
+}
+
+model EmailSequenceEnrollment {
+  id          String          @id @default(cuid())
+  sequenceId  String
+  leadId      String
+  currentStep Int             @default(0)
+  isActive    Boolean         @default(true)
+  enrolledAt  DateTime        @default(now())
+  completedAt DateTime?
+
+  sequence    EmailSequence   @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  lead        Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([sequenceId, leadId])
+  @@index([leadId])
+  @@index([isActive, currentStep])
+  @@map("email_sequence_enrollments")
+}
+                            

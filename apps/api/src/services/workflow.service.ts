@@ -1,25 +1,5 @@
 /**
- * Workflow automation engine.
- *
- * Domain events:
- *   - LEAD_CREATED
- *   - LEAD_STATUS_CHANGED
- *   - LEAD_ASSIGNED
- *
- * For each event, fetch matching Workflows (active + trigger match + status filter)
- * and execute their action chain. Each run is persisted as a WorkflowRun.
- *
- * Actions supported (see seed for examples):
- *   - SEND_WHATSAPP_TEMPLATE
- *   - ASSIGN_COUNSELOR (round-robin by least-loaded)
- *   - SET_FOLLOWUP   (params: { hours })
- *   - SET_STATUS     (params: { status })
- *   - SEND_META_EVENT
- *   - NOTIFY_COUNSELOR (creates a SYSTEM activity for the assignee)
- *
- * SAFETY
- * - Failures inside one action don't crash the whole workflow.
- * - Each action result captured into WorkflowRun.result.
+ * Workflow automation engine — orchestrates email, WhatsApp, Meta CAPI, etc.
  */
 import { prisma, Prisma } from '@oneplace/db';
 import type { Lead, Workflow } from '@oneplace/db';
@@ -27,6 +7,7 @@ import { LeadStatus } from '@oneplace/types';
 import { logger } from '../config/logger';
 import { WhatsAppService } from './whatsapp.service';
 import { MetaService } from './meta.service';
+import { EmailService } from './email.service';
 
 type ActionDef = { type: string; params: Record<string, unknown> };
 type EventType = 'LEAD_CREATED' | 'LEAD_STATUS_CHANGED' | 'LEAD_ASSIGNED';
@@ -40,7 +21,6 @@ function interpolate(value: string, lead: Lead): string {
 }
 
 async function pickRoundRobinCounselor(tenantId: string): Promise<string | null> {
-  // Least-loaded active counselor
   const rows = await prisma.user.findMany({
     where: { tenantId, role: 'COUNSELOR', isActive: true },
     select: { id: true, _count: { select: { assignedLeads: true } } },
@@ -72,6 +52,55 @@ async function runAction(
         });
         return { ok: r.sent ?? false, detail: r };
       }
+
+      case 'SEND_EMAIL': {
+        if (!ctx.lead.email) return { ok: false, detail: 'lead_has_no_email' };
+        const templateId = action.params['templateId'] as string | undefined;
+        const templateName = action.params['templateName'] as string | undefined;
+        if (templateId || templateName) {
+          const r = await EmailService.sendTemplate({
+            tenantId: ctx.tenantId,
+            templateId,
+            templateName,
+            leadId: ctx.lead.id,
+          });
+          return { ok: r.sent ?? false, detail: r };
+        }
+        // Inline email body
+        const subject = interpolate(String(action.params['subject'] ?? 'Hello'), ctx.lead);
+        const bodyHtml = interpolate(String(action.params['bodyHtml'] ?? ''), ctx.lead);
+        const r = await EmailService.send({
+          tenantId: ctx.tenantId,
+          toEmail: ctx.lead.email,
+          subject,
+          bodyHtml,
+          leadId: ctx.lead.id,
+        });
+        return { ok: r.sent ?? false, detail: r };
+      }
+
+      case 'START_EMAIL_SEQUENCE': {
+        const sequenceId = action.params['sequenceId'] as string | undefined;
+        const sequenceName = action.params['sequenceName'] as string | undefined;
+        if (!sequenceId && !sequenceName) return { ok: false, detail: 'no_sequence_specified' };
+        const seq = sequenceId
+          ? await prisma.emailSequence.findFirst({
+              where: { id: sequenceId, tenantId: ctx.tenantId },
+            })
+          : await prisma.emailSequence.findFirst({
+              where: { name: sequenceName, tenantId: ctx.tenantId },
+            });
+        if (!seq) return { ok: false, detail: 'sequence_not_found' };
+        try {
+          await prisma.emailSequenceEnrollment.create({
+            data: { sequenceId: seq.id, leadId: ctx.lead.id },
+          });
+        } catch {
+          return { ok: false, detail: 'already_enrolled' };
+        }
+        return { ok: true, detail: { sequenceId: seq.id } };
+      }
+
       case 'ASSIGN_COUNSELOR': {
         const targetId =
           (action.params['userId'] as string | undefined) ??
@@ -83,6 +112,7 @@ async function runAction(
         });
         return { ok: true, detail: { assignedToId: targetId } };
       }
+
       case 'SET_FOLLOWUP': {
         const hours = Number(action.params['hours'] ?? 24);
         const at = new Date(Date.now() + hours * 60 * 60 * 1000);
@@ -92,6 +122,7 @@ async function runAction(
         });
         return { ok: true, detail: { nextFollowUpAt: at } };
       }
+
       case 'SET_STATUS': {
         const status = String(action.params['status']) as LeadStatus;
         await prisma.lead.update({
@@ -100,6 +131,7 @@ async function runAction(
         });
         return { ok: true, detail: { status } };
       }
+
       case 'SEND_META_EVENT': {
         const r = await MetaService.sendConversionEvent({
           tenantId: ctx.tenantId,
@@ -108,6 +140,7 @@ async function runAction(
         });
         return { ok: 'sent' in r ? Boolean(r.sent) : false, detail: r };
       }
+
       case 'NOTIFY_COUNSELOR': {
         if (!ctx.lead.assignedToId) return { ok: false, detail: 'unassigned' };
         const message = interpolate(String(action.params['message'] ?? 'Action needed'), ctx.lead);

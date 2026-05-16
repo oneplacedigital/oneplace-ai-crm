@@ -1,13 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiPost, tokens, userCache } from '@/lib/api';
 import type { LoginResponse } from '@oneplace/types';
+import { CheckCircle2 } from 'lucide-react';
+
+interface LicenseInfo {
+  valid: boolean;
+  plan: string;
+  validForDays: number;
+  name: string | null;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
+  const params = useSearchParams();
   const [form, setForm] = useState({
     tenantName: '',
     tenantSlug: '',
@@ -15,7 +24,11 @@ export default function RegisterPage() {
     adminEmail: '',
     adminPhone: '',
     password: '',
+    licenseCode: params?.get('code') ?? '',
   });
+  const [licenseInfo, setLicenseInfo] = useState<LicenseInfo | null>(null);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,6 +36,36 @@ export default function RegisterPage() {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
   }
+
+  async function validateLicense() {
+    if (!form.licenseCode.trim()) {
+      setLicenseInfo(null);
+      setLicenseError(null);
+      return;
+    }
+    setValidating(true);
+    setLicenseError(null);
+    try {
+      const info = await apiPost<LicenseInfo>('/licenses/validate', { code: form.licenseCode });
+      setLicenseInfo(info);
+    } catch (e) {
+      setLicenseError(e instanceof Error ? e.message : 'Invalid code');
+      setLicenseInfo(null);
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  useEffect(() => {
+    if (form.licenseCode && form.licenseCode.length >= 8) {
+      const t = setTimeout(validateLicense, 500);
+      return () => clearTimeout(t);
+    }
+    setLicenseInfo(null);
+    setLicenseError(null);
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.licenseCode]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,6 +75,7 @@ export default function RegisterPage() {
       const res = await apiPost<LoginResponse>('/auth/register-tenant', {
         ...form,
         tenantSlug: form.tenantSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+        licenseCode: form.licenseCode || undefined,
       });
       tokens.set(res.accessToken, res.refreshToken);
       userCache.set(res.user);
@@ -47,14 +91,41 @@ export default function RegisterPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <form onSubmit={onSubmit} className="card w-full max-w-lg space-y-4 p-8">
         <div>
-          <h1 className="text-2xl font-bold text-navy-500">Create your Institute</h1>
-          <p className="text-sm text-slate-500">14-day trial. No card required.</p>
+          <h1 className="text-2xl font-bold text-navy-500">Create your Pipely workspace</h1>
+          <p className="text-sm text-slate-500">
+            14-day trial. No card required. Have a license code? Enter below for premium access.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-slate-500">License Code (optional)</label>
+          <input
+            className="input font-mono"
+            placeholder="e.g. ONEPLACE-MAY-2026"
+            value={form.licenseCode}
+            onChange={update('licenseCode')}
+          />
+          {validating && <p className="mt-1 text-xs text-slate-500">Checking...</p>}
+          {licenseInfo && (
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              <CheckCircle2 size={14} />
+              <span>
+                Valid! <strong>{licenseInfo.plan}</strong> plan for <strong>{licenseInfo.validForDays} days</strong>
+                {licenseInfo.name && ` (${licenseInfo.name})`}
+              </span>
+            </div>
+          )}
+          {licenseError && (
+            <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {licenseError}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-slate-500">Institute Name</label>
-            <input className="input" required value={form.tenantName} onChange={update('tenantName')} />
+            <label className="text-xs font-semibold text-slate-500">Workspace Name</label>
+            <input className="input" required placeholder="e.g. OnePlace Digital Academy" value={form.tenantName} onChange={update('tenantName')} />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500">URL Slug</label>
@@ -108,17 +179,12 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <button type="submit" className="btn-primary w-full" disabled={loading}>
-          {loading ? 'Creating…' : 'Create Institute & Start Trial'}
+        <button type="submit" className="btn-gradient w-full" disabled={loading || (form.licenseCode.length > 0 && !licenseInfo)}>
+          {loading ? 'Creating...' : 'Create workspace & Start'}
         </button>
 
         <p className="text-center text-sm text-slate-500">
           Already have an account?{' '}
           <Link href="/login" className="font-semibold text-brand hover:underline">
             Sign in
-          </Link>
-        </p>
-      </form>
-    </main>
-  );
-}
+          </

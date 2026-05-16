@@ -4,12 +4,14 @@
 
 @layer base {
   :root {
-    --brand: #db0000;
-    --navy: #13273b;
+    --brand: #6366f1;
+    --brand-dark: #4f46e5;
+    --accent: #8b5cf6;
+    --ink: #1e1b4b;
   }
   html,
   body {
-    @apply bg-slate-50 text-navy-700 antialiased;
+    @apply bg-slate-50 text-ink-500 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
 }
@@ -18,19 +20,14 @@
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60;
   }
+  .btn-gradient {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-pipely-gradient px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60;
+  }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-navy-500 transition hover:bg-slate-100;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-ink-500 transition hover:bg-slate-100;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-navy-500 transition hover:bg-slate-100;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-500 transition hover:bg-slate-100;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-navy-700 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20;
-  }
-  .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
-  }
-  .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
-  }
-}
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-ink-500 placeh

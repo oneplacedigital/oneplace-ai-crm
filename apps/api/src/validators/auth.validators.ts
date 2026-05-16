@@ -16,6 +16,7 @@ export const registerTenantSchema = z.object({
   adminEmail: z.string().email(),
   adminPhone: z.string().min(7).max(20).optional(),
   password: z.string().min(8).max(128),
+  licenseCode: z.string().min(4).max(80).optional(),
 });
 
 export const refreshSchema = z.object({

@@ -1,6 +1,5 @@
 /**
- * Seed script — bootstraps OnePlace tenant + admin + sample data + default workflows.
- * Run: pnpm db:seed
+ * Seed script — bootstraps OnePlace tenant + admin (SUPER_ADMIN) + sample data + default workflows + sample license keys.
  */
 import {
   PrismaClient,
@@ -11,6 +10,7 @@ import {
   TenantPlan,
   ActivityType,
   WorkflowTrigger,
+  LicenseStatus,
 } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -30,26 +30,29 @@ async function main() {
       city: 'Nashik',
       country: 'IN',
       plan: TenantPlan.PRO,
-      brandColor: '#DB0000',
+      brandColor: '#DB0000', // OnePlace keeps red - they're a tenant inside Pipely
       timezone: 'Asia/Kolkata',
+      emailFromAddress: 'noreply@oneplacedigital.com',
+      emailFromName: 'OnePlace Digital Academy',
     },
   });
   console.log(`✓ Tenant: ${tenant.name} (${tenant.id})`);
 
+  // OnePlace admin is SUPER_ADMIN — can manage all tenants on the platform
   const adminPassword = await bcrypt.hash('OnePlace@2026', 12);
   const admin = await prisma.user.upsert({
     where: { tenantId_email: { tenantId: tenant.id, email: 'admin@oneplacedigital.com' } },
-    update: {},
+    update: { role: UserRole.SUPER_ADMIN },
     create: {
       tenantId: tenant.id,
       email: 'admin@oneplacedigital.com',
       name: 'OnePlace Admin',
       phone: '+919529622968',
       passwordHash: adminPassword,
-      role: UserRole.TENANT_ADMIN,
+      role: UserRole.SUPER_ADMIN,
     },
   });
-  console.log(`✓ Admin: ${admin.email} / OnePlace@2026`);
+  console.log(`✓ SUPER_ADMIN: ${admin.email} / OnePlace@2026`);
 
   const counselorPassword = await bcrypt.hash('Counselor@2026', 12);
   const counselors = await Promise.all(
@@ -182,14 +185,37 @@ async function main() {
           userId: admin.id,
           type: ActivityType.SYSTEM,
           title: 'Lead created via seed',
-          body: `Seeded sample lead for ${created.fullName}`,
         },
       });
     }
     console.log(`✓ Sample leads: ${sampleLeads.length}`);
-  } else {
-    console.log(`✓ Leads already present: ${existingLeads} — skipped sample insert`);
   }
+
+  // Sample license keys for students
+  const sampleLicenses = [
+    {
+      code: 'ONEPLACE-STUDENT-DEMO',
+      name: 'Free student demo (90 days)',
+      plan: TenantPlan.STARTER,
+      validForDays: 90,
+      maxRedemptions: 1000,
+    },
+    {
+      code: 'ONEPLACE-PRO-1YEAR',
+      name: 'OnePlace Pro 1 year',
+      plan: TenantPlan.PRO,
+      validForDays: 365,
+      maxRedemptions: 1,
+    },
+  ];
+  for (const lic of sampleLicenses) {
+    await prisma.licenseKey.upsert({
+      where: { code: lic.code },
+      update: {},
+      create: { ...lic, status: LicenseStatus.ACTIVE },
+    });
+  }
+  console.log(`✓ Sample licenses: ${sampleLicenses.length}`);
 
   // Default workflows
   const existingWorkflows = await prisma.workflow.count({ where: { tenantId: tenant.id } });
@@ -202,18 +228,8 @@ async function main() {
           trigger: WorkflowTrigger.LEAD_CREATED,
           triggerStatuses: [],
           actions: [
-            {
-              type: 'SEND_WHATSAPP_TEMPLATE',
-              params: {
-                templateName: 'oneplace_welcome',
-                language: 'en',
-                variables: ['{{lead.fullName}}'],
-              },
-            },
-            {
-              type: 'SET_FOLLOWUP',
-              params: { hours: 24 },
-            },
+            { type: 'SEND_WHATSAPP_TEMPLATE', params: { templateName: 'oneplace_welcome', language: 'en', variables: ['{{lead.fullName}}'] } },
+            { type: 'SET_FOLLOWUP', params: { hours: 24 } },
           ],
         },
         {
@@ -225,19 +241,52 @@ async function main() {
         },
         {
           tenantId: tenant.id,
-          name: 'Notify counselor on demo booked',
-          trigger: WorkflowTrigger.LEAD_STATUS_CHANGED,
-          triggerStatuses: [LeadStatus.DEMO_SCHEDULED],
-          actions: [{ type: 'NOTIFY_COUNSELOR', params: { message: 'Demo booked — confirm slot.' } }],
+          name: 'Send welcome email to new lead',
+          trigger: WorkflowTrigger.LEAD_CREATED,
+          triggerStatuses: [],
+          actions: [{ type: 'SEND_EMAIL', params: { templateName: 'Welcome Email' } }],
         },
       ],
     });
     console.log('✓ Default workflows: 3');
   }
 
+  // Default email template
+  const existingTemplate = await prisma.emailTemplate.findFirst({
+    where: { tenantId: tenant.id, name: 'Welcome Email' },
+  });
+  if (!existingTemplate) {
+    await prisma.emailTemplate.create({
+      data: {
+        tenantId: tenant.id,
+        name: 'Welcome Email',
+        subject: 'Welcome to OnePlace Digital Academy, {{lead.firstName}}!',
+        bodyHtml: `<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+  <h2 style="color:#DB0000">Welcome, {{lead.firstName}}!</h2>
+  <p>Thanks for showing interest in OnePlace Digital Academy — the #1 AI-First Marketing Institute in Nashik.</p>
+  <p>Our team will reach out to you on +91 95296 22968 within 24 hours to schedule your free demo session.</p>
+  <p>In the meantime, here's what makes OnePlace different:</p>
+  <ul>
+    <li>AI-integrated curriculum (ChatGPT, Claude, Midjourney workflows)</li>
+    <li>100% placement support</li>
+    <li>Live Meta Ads + Google Ads project work</li>
+    <li>Real client projects during course</li>
+  </ul>
+  <p>Have questions? Reply to this email or WhatsApp us anytime.</p>
+  <p>Best,<br/><strong>Team OnePlace</strong></p>
+</div>`,
+      },
+    });
+    console.log('✓ Default email template: Welcome Email');
+  }
+
   console.log('\n✅ Seed complete!\n');
-  console.log('Login (admin):     admin@oneplacedigital.com / OnePlace@2026');
-  console.log('Login (counselor): priya@oneplacedigital.com / Counselor@2026');
+  console.log('LOGINS:');
+  console.log('  SUPER_ADMIN: admin@oneplacedigital.com / OnePlace@2026');
+  console.log('  Counselor:   priya@oneplacedigital.com / Counselor@2026');
+  console.log('\nSTUDENT SIGNUP CODES:');
+  console.log('  ONEPLACE-STUDENT-DEMO  (Starter 90 days, 1000 students can use)');
+  console.log('  ONEPLACE-PRO-1YEAR     (Pro 1 year, single-use - generate more via Super Admin)');
 }
 
 main()
@@ -245,6 +294,4 @@ main()
     console.error('❌ Seed failed:', e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .final

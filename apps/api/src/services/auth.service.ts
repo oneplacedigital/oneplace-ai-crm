@@ -11,6 +11,7 @@ import {
   verifyRefreshToken,
   refreshTokenExpiryDate,
 } from '../utils/jwt';
+import { LicenseService } from './license.service';
 
 const toAuthUser = (u: {
   id: string;
@@ -40,6 +41,9 @@ export const AuthService = {
     const ok = await bcrypt.compare(input.password, user.passwordHash);
     if (!ok) throw Unauthorized('Invalid credentials');
     if (!user.tenant.isActive) throw Unauthorized('Tenant is disabled');
+    if (user.tenant.isSuspended) {
+      throw Unauthorized(`Account suspended: ${user.tenant.suspendedReason ?? 'contact support'}`);
+    }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
@@ -63,12 +67,18 @@ export const AuthService = {
     return { user: toAuthUser(user), accessToken, refreshToken };
   },
 
-  async registerTenant(input: RegisterTenantRequest): Promise<LoginResponse> {
+  /** Register a new tenant. Accepts optional licenseCode to redeem. */
+  async registerTenant(input: RegisterTenantRequest & { licenseCode?: string }): Promise<LoginResponse> {
     const slug = input.tenantSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     const existing = await prisma.tenant.findFirst({
       where: { OR: [{ slug }, { email: input.adminEmail.toLowerCase() }] },
     });
     if (existing) throw Conflict('Tenant slug or admin email already in use');
+
+    // Pre-validate license before creating tenant (avoid orphan tenant if license is bad)
+    if (input.licenseCode) {
+      await LicenseService.validate(input.licenseCode);
+    }
 
     const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_ROUNDS);
 
@@ -91,6 +101,17 @@ export const AuthService = {
       },
       include: { users: true },
     });
+
+    if (input.licenseCode) {
+      try {
+        await LicenseService.redeem(input.licenseCode, tenant.id);
+      } catch (e) {
+        // Rollback tenant if license redemption fails after creation
+        await prisma.tenant.delete({ where: { id: tenant.id } });
+        throw e;
+      }
+    }
+
     const admin = tenant.users[0]!;
     return this.login({ email: admin.email, password: input.password }, {});
   },
@@ -106,7 +127,6 @@ export const AuthService = {
     if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
       throw Unauthorized('Refresh token revoked or expired');
     }
-    // Rotate
     await prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
@@ -144,7 +164,7 @@ export const AuthService = {
         data: { revokedAt: new Date() },
       });
     } catch {
-      // ignore — token already invalid
+      // ignore
     }
   },
 
@@ -158,5 +178,4 @@ export const AuthService = {
   },
 };
 
-/** Random invitation password helper (used by tenant admin creating counselors) */
 export const generateTempPassword = () => crypto.randomBytes(8).toString('base64url');

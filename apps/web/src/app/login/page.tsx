@@ -10,8 +10,8 @@ export default function LoginPage() {
   const router = useRouter();
   const login = useAuth((s) => s.login);
   const loading = useAuth((s) => s.loading);
-  const [email, setEmail] = useState('admin@oneplacedigital.com');
-  const [password, setPassword] = useState('OnePlace@2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
@@ -27,18 +27,19 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-screen grid-cols-1 md:grid-cols-2">
-      <aside className="hidden flex-col justify-between bg-navy-500 p-12 text-white md:flex">
+      <aside className="hidden flex-col justify-between bg-pipely-gradient p-12 text-white md:flex">
         <div>
-          <div className="text-xs uppercase tracking-widest text-brand">OnePlace Digital Academy</div>
-          <div className="mt-2 text-3xl font-bold">ONEPLACE AI CRM</div>
+          <div className="text-xs uppercase tracking-widest text-brand-100">Pipely</div>
+          <div className="mt-2 text-3xl font-bold">Your AI Pipeline.<br/>Built to Convert.</div>
         </div>
-        <div className="space-y-4 text-sm text-slate-300">
-          <p>"From Meta Lead to Paid Student — fully automated."</p>
+        <div className="space-y-4 text-sm text-white/85">
+          <p>"From Meta Lead to Paying Customer — fully automated."</p>
           <ul className="space-y-2">
             <li>✓ AI lead qualification & scoring</li>
-            <li>✓ WhatsApp follow-up automation</li>
-            <li>✓ Meta Conversion API events on every status change</li>
+            <li>✓ WhatsApp + Email automation</li>
+            <li>✓ Meta Conversion API on every status change</li>
             <li>✓ Counselor performance dashboards</li>
+            <li>✓ Multi-workspace with license keys</li>
           </ul>
         </div>
       </aside>
@@ -46,8 +47,8 @@ export default function LoginPage() {
       <section className="flex items-center justify-center bg-white p-6">
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5">
           <div>
-            <h1 className="text-2xl font-bold text-navy-500">Sign in</h1>
-            <p className="text-sm text-slate-500">Access your admissions pipeline</p>
+            <h1 className="text-2xl font-bold text-ink-500">Sign in to Pipely</h1>
+            <p className="text-sm text-slate-500">Access your pipeline workspace</p>
           </div>
 
           <div className="space-y-1">
@@ -61,6 +62,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              placeholder="you@example.com"
             />
           </div>
 
@@ -84,18 +86,12 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button type="submit" className="btn-primary w-full" disabled={loading}>
+          <button type="submit" className="btn-gradient w-full" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
 
           <p className="text-center text-sm text-slate-500">
             No account?{' '}
             <Link href="/register" className="font-semibold text-brand hover:underline">
-              Create your institute
-            </Link>
-          </p>
-        </form>
-      </section>
-    </main>
-  );
-}
+              Create your workspace
+   

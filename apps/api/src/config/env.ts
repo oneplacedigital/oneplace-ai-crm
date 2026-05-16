@@ -3,9 +3,9 @@ import { z } from 'zod';
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  // Render/Railway/Fly inject PORT — honor it first, then API_PORT, then 4000.
   PORT: z.coerce.number().optional(),
   API_PORT: z.coerce.number().default(4000),
+  API_BASE_URL: z.string().optional().default(''),
   DATABASE_URL: z.string().url(),
 
   // Auth
@@ -40,6 +40,12 @@ const schema = z.object({
     .string()
     .default('false')
     .transform((v) => v === 'true'),
+
+  // Email (Resend)
+  RESEND_API_KEY: z.string().optional().default(''),
+
+  // Platform
+  SUPER_ADMIN_BOOTSTRAP_EMAIL: z.string().optional().default('admin@oneplacedigital.com'),
 });
 
 const parsed = schema.safeParse(process.env);
