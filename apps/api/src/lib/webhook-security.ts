@@ -17,12 +17,6 @@ import { env } from '../config/env';
 import { logger } from '../config/logger';
 import { Forbidden, BadRequest } from '../utils/errors';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    rawBody?: Buffer;
-    webhook?: { provider: string; externalId: string };
-  }
-}
 
 /**
  * Capture raw bytes BEFORE JSON parsing so HMAC stays valid.
@@ -101,7 +95,7 @@ export async function recordWebhookEvent(
   try {
     await prisma.webhookEvent.create({
       data: {
-        provider,
+        provider: provider as never,
         externalId,
         payload: payload as never,
       },
