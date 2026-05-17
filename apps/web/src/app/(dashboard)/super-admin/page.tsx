@@ -350,7 +350,6 @@ function NewLicenseModal({ onClose, onCreated }: { onClose: () => void; onCreate
           </button>
         </div>
       </form>
-          </div>
     </div>
   );
 }
