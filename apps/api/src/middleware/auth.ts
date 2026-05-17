@@ -1,13 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken, AccessTokenPayload } from '../utils/jwt';
+import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized, Forbidden } from '../utils/errors';
 import { UserRole } from '@oneplace/types';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    auth?: AccessTokenPayload;
-  }
-}
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
@@ -26,7 +21,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 export function requireRole(...allowed: UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.auth) return next(Unauthorized());
-    if (!allowed.includes(req.auth.role)) return next(Forbidden());
+    if (!allowed.includes(req.auth.role as UserRole)) return next(Forbidden());
     return next();
   };
 }
