@@ -234,7 +234,7 @@ export default function SuperAdminPage() {
   );
 }
 
-function KPI({ label, value, icon: Icon }: { label: string; value: number | string; icon?: ComponentType<{ size?: number; className?: string }> }) {
+function KPI({ label, value, icon: Icon }: { label: string; value: number | string; icon?: any }) {
   return (
     <div className="card p-5">
       <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
