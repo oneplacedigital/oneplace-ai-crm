@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiPost, tokens, userCache } from '@/lib/api';
@@ -16,7 +16,7 @@ interface LicenseInfo {
   name: string | null;
 }
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [form, setForm] = useState({
@@ -195,3 +195,6 @@ export default function RegisterPage() {
     </main>
   );
 }
+
+
+export default function RegisterPage() { return <Suspense fallback={null}><RegisterForm /></Suspense>; }
