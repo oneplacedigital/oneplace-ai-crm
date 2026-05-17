@@ -15,7 +15,9 @@ RUN pnpm config set node-linker hoisted
 RUN pnpm install --frozen-lockfile=false
 
 COPY . .
+RUN pnpm --filter @oneplace/types build
 RUN pnpm --filter @oneplace/db prisma:generate
+RUN pnpm --filter @oneplace/db build
 RUN pnpm --filter @oneplace/api build
 
 ENV NODE_ENV=production

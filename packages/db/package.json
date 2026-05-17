@@ -2,10 +2,8 @@
   "name": "@oneplace/db",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "scripts": {
-    "prisma:generate": "prisma generate",
+  "main": "./dist/index.js",  "types": "./dist/index.d.ts",  "scripts": {
+    "build": "tsc -p tsconfig.json",    "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
