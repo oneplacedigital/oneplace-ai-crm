@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import useSWR from 'swr';
 import { Shield, Plus, Ban, Power, KeyRound, Building2 } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
@@ -234,7 +234,7 @@ export default function SuperAdminPage() {
   );
 }
 
-function KPI({ label, value, icon: Icon }: { label: string; value: number | string; icon?: React.ComponentType<{ size?: number; className?: string }> }) {
+function KPI({ label, value, icon: Icon }: { label: string; value: number | string; icon?: ComponentType<{ size?: number; className?: string }> }) {
   return (
     <div className="card p-5">
       <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
@@ -350,6 +350,4 @@ function NewLicenseModal({ onClose, onCreated }: { onClose: () => void; onCreate
           </button>
         </div>
       </form>
-    </div>
-  );
-}
+    
