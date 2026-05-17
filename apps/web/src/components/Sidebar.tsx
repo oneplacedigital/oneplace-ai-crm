@@ -3,7 +3,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { LayoutDashboard, Users, KanbanSquare, GraduationCap, UserCog, LogOut, Zap, Plug, BarChart3, Mail, Shield } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  KanbanSquare,
+  GraduationCap,
+  UserCog,
+  LogOut,
+  Zap,
+  Plug,
+  BarChart3,
+  Mail,
+  Shield,
+} from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 
 const nav = [
@@ -28,32 +40,57 @@ export default function Sidebar() {
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-ink-500 text-slate-100">
       <div className="px-6 py-5">
         <div className="text-[10px] uppercase tracking-widest text-brand-300">{user?.tenantName ?? 'Workspace'}</div>
-        <div className="text-lg font-bold leading-tight">Pipely<span className="text-brand">.</span></div>
+        <div className="text-lg font-bold leading-tight">
+          Pipely<span className="text-brand">.</span>
+        </div>
       </div>
+
       <nav className="flex-1 space-y-1 px-3">
         {nav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname?.startsWith(href + '/');
           return (
-            <Link key={href} href={href} className={clsx('flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition', active ? 'bg-brand text-white' : 'text-slate-300 hover:bg-ink-700 hover:text-white')}>
-              <Icon size={18} /><span>{label}</span>
+            <Link
+              key={href}
+              href={href}
+              className={clsx(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
+                active ? 'bg-brand text-white' : 'text-slate-300 hover:bg-ink-700 hover:text-white',
+              )}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
             </Link>
           );
         })}
+
         {isSuperAdmin && (
           <>
             <div className="my-3 border-t border-ink-700" />
             <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-brand-300">Platform</div>
-            <Link href="/super-admin" className={clsx('flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition', pathname?.startsWith('/super-admin') ? 'bg-brand text-white' : 'text-slate-300 hover:bg-ink-700 hover:text-white')}>
-              <Shield size={18} /><span>Super Admin</span>
+            <Link
+              href="/super-admin"
+              className={clsx(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
+                pathname?.startsWith('/super-admin')
+                  ? 'bg-brand text-white'
+                  : 'text-slate-300 hover:bg-ink-700 hover:text-white',
+              )}
+            >
+              <Shield size={18} />
+              <span>Super Admin</span>
             </Link>
           </>
         )}
       </nav>
+
       <div className="border-t border-ink-700 p-4">
         <div className="mb-2 text-xs text-slate-400">Signed in as</div>
         <div className="truncate text-sm font-semibold text-white">{user?.name}</div>
         <div className="truncate text-xs text-slate-400">{user?.email}</div>
-        <button onClick={() => logout()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-ink-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-ink-700">
+        <button
+          onClick={() => logout()}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-ink-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-ink-700"
+        >
           <LogOut size={14} /> Sign out
         </button>
       </div>

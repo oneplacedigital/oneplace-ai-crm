@@ -54,4 +54,12 @@ Write-Host " Super Admin menu now appears in sidebar." -ForegroundColor Cyan
 Write-Host ""
 Write-Host " STUDENT SIGNUP CODES (already seeded):" -ForegroundColor Yellow
 Write-Host "   ONEPLACE-STUDENT-DEMO  - Starter 90 days, 1000 students" -ForegroundColor White
-Write-Host "   ONEPLACE-PRO-1YEAR     - Pro 1 year, single-use" -
+Write-Host "   ONEPLACE-PRO-1YEAR     - Pro 1 year, single-use" -ForegroundColor White
+Write-Host ""
+Write-Host " Student signup URL with code prefilled:" -ForegroundColor Yellow
+Write-Host "   https://oneplace-ai-crm.vercel.app/register?code=ONEPLACE-STUDENT-DEMO" -ForegroundColor White
+Write-Host ""
+Write-Host " NEXT: For email sending, sign up at https://resend.com" -ForegroundColor Yellow
+Write-Host "       Get API key, add as RESEND_API_KEY on Render env vars" -ForegroundColor White
+Write-Host ""
+Read-Host "Press Enter to exit"
