@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, type ComponentType } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
-import { Shield, Plus, Ban, Power, KeyRound, Building2 } from 'lucide-react';
+import { Shield, Plus, Ban, Power, KeyRound, Building2, CheckCircle2, XCircle } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { dateShort } from '@/lib/format';
 
@@ -15,6 +15,8 @@ interface Tenant {
   isActive: boolean;
   isSuspended: boolean;
   suspendedReason: string | null;
+  approvalStatus: string;
+  rejectedReason: string | null;
   city: string | null;
   createdAt: string;
   trialEndsAt: string | null;
@@ -53,6 +55,8 @@ export default function SuperAdminPage() {
   const [tab, setTab] = useState<'tenants' | 'licenses'>('tenants');
   const [showNewLicense, setShowNewLicense] = useState(false);
 
+  const pendingCount = tenants?.filter((t) => t.approvalStatus === 'PENDING').length ?? 0;
+
   async function suspend(id: string, name: string) {
     const reason = prompt(`Suspend ${name}?\nReason:`);
     if (!reason) return;
@@ -65,22 +69,42 @@ export default function SuperAdminPage() {
     mutateTenants();
   }
 
+  async function approve(id: string, name: string) {
+    if (!confirm(`Approve "${name}"? They will get full access immediately.`)) return;
+    await apiPost(`/super-admin/tenants/${id}/approve`, {});
+    mutateTenants();
+  }
+
+  async function reject(id: string, name: string) {
+    const reason = prompt(`Reject "${name}"?\nReason (shown to the applicant):`);
+    if (!reason) return;
+    await apiPost(`/super-admin/tenants/${id}/reject`, { reason });
+    mutateTenants();
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Shield className="text-brand" size={24} />
         <div>
           <h1 className="text-2xl font-bold text-navy-500">Super Admin</h1>
-          <p className="text-sm text-slate-500">Manage all tenant accounts and license keys.</p>
+          <p className="text-sm text-slate-500">Approve signups, manage businesses and license keys.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <KPI label="Tenants" value={stats?.totalTenants ?? 0} icon={Building2} />
+        <KPI label="Businesses" value={stats?.totalTenants ?? 0} icon={Building2} />
+        <KPI label="Pending approval" value={pendingCount} icon={CheckCircle2} />
         <KPI label="Leads (all)" value={stats?.totalLeads ?? 0} />
-        <KPI label="Emails sent" value={stats?.totalEmails ?? 0} />
         <KPI label="Active licenses" value={stats?.activeLicenses ?? 0} icon={KeyRound} />
       </div>
+
+      {pendingCount > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <strong>{pendingCount}</strong> {pendingCount === 1 ? 'business is' : 'businesses are'}{' '}
+          waiting for your approval — see the Pending rows below.
+        </div>
+      )}
 
       <div className="flex gap-2 border-b border-slate-200">
         <button
@@ -89,7 +113,7 @@ export default function SuperAdminPage() {
           }`}
           onClick={() => setTab('tenants')}
         >
-          Tenants ({tenants?.length ?? 0})
+          Businesses ({tenants?.length ?? 0})
         </button>
         <button
           className={`px-4 py-2 text-sm font-semibold ${
@@ -106,7 +130,7 @@ export default function SuperAdminPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-4 py-3">Institute</th>
+                <th className="px-4 py-3">Business</th>
                 <th className="px-4 py-3">Plan</th>
                 <th className="px-4 py-3">License</th>
                 <th className="px-4 py-3">Status</th>
@@ -117,7 +141,7 @@ export default function SuperAdminPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {tenants?.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id} className={t.approvalStatus === 'PENDING' ? 'bg-amber-50/60' : ''}>
                   <td className="px-4 py-3">
                     <div className="font-semibold text-navy-500">{t.name}</div>
                     <div className="text-xs text-slate-500">{t.email}</div>
@@ -137,7 +161,13 @@ export default function SuperAdminPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {t.isSuspended ? (
+                    {t.approvalStatus === 'PENDING' ? (
+                      <span className="badge bg-amber-100 text-amber-700">Pending</span>
+                    ) : t.approvalStatus === 'REJECTED' ? (
+                      <span className="badge bg-red-100 text-red-700" title={t.rejectedReason ?? ''}>
+                        Rejected
+                      </span>
+                    ) : t.isSuspended ? (
                       <span className="badge bg-red-100 text-red-700" title={t.suspendedReason ?? ''}>
                         Suspended
                       </span>
@@ -152,7 +182,29 @@ export default function SuperAdminPage() {
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">{dateShort(t.createdAt)}</td>
                   <td className="px-4 py-3 text-right">
-                    {t.isSuspended ? (
+                    {t.approvalStatus === 'PENDING' ? (
+                      <div className="flex justify-end gap-3">
+                        <button
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline"
+                          onClick={() => approve(t.id, t.name)}
+                        >
+                          <CheckCircle2 size={12} /> Approve
+                        </button>
+                        <button
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
+                          onClick={() => reject(t.id, t.name)}
+                        >
+                          <XCircle size={12} /> Reject
+                        </button>
+                      </div>
+                    ) : t.approvalStatus === 'REJECTED' ? (
+                      <button
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline"
+                        onClick={() => approve(t.id, t.name)}
+                      >
+                        <CheckCircle2 size={12} /> Approve
+                      </button>
+                    ) : t.isSuspended ? (
                       <button
                         className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline"
                         onClick={() => activate(t.id)}
@@ -285,7 +337,7 @@ function NewLicenseModal({ onClose, onCreated }: { onClose: () => void; onCreate
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/40 p-4">
         <div className="card w-full max-w-md p-6 text-center">
           <h3 className="text-lg font-bold text-emerald-600">License Created!</h3>
-          <p className="mt-2 text-sm text-slate-600">Share this code with students. They redeem it at /register.</p>
+          <p className="mt-2 text-sm text-slate-600">Share this code. They redeem it at /register.</p>
           <div className="my-4 rounded-lg bg-slate-100 px-4 py-3">
             <code className="text-lg font-mono font-bold text-navy-500">{created.code}</code>
           </div>

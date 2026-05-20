@@ -31,6 +31,8 @@ export const SuperAdminService = {
       isActive: t.isActive,
       isSuspended: t.isSuspended,
       suspendedReason: t.suspendedReason,
+      approvalStatus: t.approvalStatus,
+      rejectedReason: t.rejectedReason,
       city: t.city,
       createdAt: t.createdAt,
       trialEndsAt: t.trialEndsAt,
@@ -84,6 +86,27 @@ export const SuperAdminService = {
     return prisma.tenant.update({
       where: { id },
       data: { isSuspended: false, isActive: true, suspendedReason: null },
+    });
+  },
+
+  /** Approve a pending tenant signup — grants full login access. */
+  async approve(id: string) {
+    const t = await prisma.tenant.findUnique({ where: { id } });
+    if (!t) throw NotFound('Tenant not found');
+    return prisma.tenant.update({
+      where: { id },
+      data: { approvalStatus: 'APPROVED', isActive: true, rejectedReason: null },
+    });
+  },
+
+  /** Reject a pending tenant signup with a reason. */
+  async reject(id: string, reason: string) {
+    const t = await prisma.tenant.findUnique({ where: { id } });
+    if (!t) throw NotFound('Tenant not found');
+    if (t.slug === 'oneplace') throw Forbidden('Cannot reject the platform owner tenant');
+    return prisma.tenant.update({
+      where: { id },
+      data: { approvalStatus: 'REJECTED', isActive: false, rejectedReason: reason },
     });
   },
 

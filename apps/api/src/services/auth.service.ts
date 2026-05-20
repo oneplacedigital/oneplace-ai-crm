@@ -40,6 +40,16 @@ export const AuthService = {
     if (!user || !user.isActive) throw Unauthorized('Invalid credentials');
     const ok = await bcrypt.compare(input.password, user.passwordHash);
     if (!ok) throw Unauthorized('Invalid credentials');
+    if (user.tenant.approvalStatus === 'PENDING') {
+      throw Unauthorized(
+        'Your account is awaiting admin approval — you will be notified by email once approved.',
+      );
+    }
+    if (user.tenant.approvalStatus === 'REJECTED') {
+      throw Unauthorized(
+        `Account not approved: ${user.tenant.rejectedReason ?? 'please contact support'}`,
+      );
+    }
     if (!user.tenant.isActive) throw Unauthorized('Tenant is disabled');
     if (user.tenant.isSuspended) {
       throw Unauthorized(`Account suspended: ${user.tenant.suspendedReason ?? 'contact support'}`);
@@ -67,8 +77,10 @@ export const AuthService = {
     return { user: toAuthUser(user), accessToken, refreshToken };
   },
 
-  /** Register a new tenant. Accepts optional licenseCode to redeem. */
-  async registerTenant(input: RegisterTenantRequest & { licenseCode?: string }): Promise<LoginResponse> {
+  /** Register a new tenant. Creates a PENDING workspace awaiting super-admin approval. */
+  async registerTenant(
+    input: RegisterTenantRequest & { licenseCode?: string },
+  ): Promise<{ pending: true; message: string; tenantSlug: string }> {
     const slug = input.tenantSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     const existing = await prisma.tenant.findFirst({
       where: { OR: [{ slug }, { email: input.adminEmail.toLowerCase() }] },
@@ -112,8 +124,13 @@ export const AuthService = {
       }
     }
 
-    const admin = tenant.users[0]!;
-    return this.login({ email: admin.email, password: input.password }, {});
+    // New tenants start PENDING (schema default) — super admin must approve before login.
+    return {
+      pending: true as const,
+      message:
+        'Your workspace has been created and is awaiting approval. You will receive an email once an admin approves your account.',
+      tenantSlug: tenant.slug,
+    };
   },
 
   async refresh(refreshToken: string, meta: { userAgent?: string; ip?: string }): Promise<LoginResponse> {

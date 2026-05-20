@@ -28,14 +28,17 @@ enum TenantPlan {
 enum LeadStatus {
   NEW
   CONTACTED
-  INTERESTED
   QUALIFIED
-  DEMO_SCHEDULED
-  DEMO_COMPLETED
-  ADMISSION_CONFIRMED
-  PAYMENT_COMPLETED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
   LOST
-  COLD
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum LeadSource {
@@ -163,6 +166,8 @@ model Tenant {
   isActive        Boolean     @default(true)
   isSuspended     Boolean     @default(false)
   suspendedReason String?
+  approvalStatus  ApprovalStatus @default(PENDING)
+  rejectedReason  String?
 
   licenseKeyId     String?
   licenseExpiresAt DateTime?

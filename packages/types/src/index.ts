@@ -17,16 +17,20 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const LeadStatus = {
   NEW: 'NEW',
   CONTACTED: 'CONTACTED',
-  INTERESTED: 'INTERESTED',
   QUALIFIED: 'QUALIFIED',
-  DEMO_SCHEDULED: 'DEMO_SCHEDULED',
-  DEMO_COMPLETED: 'DEMO_COMPLETED',
-  ADMISSION_CONFIRMED: 'ADMISSION_CONFIRMED',
-  PAYMENT_COMPLETED: 'PAYMENT_COMPLETED',
+  PROPOSAL_SENT: 'PROPOSAL_SENT',
+  NEGOTIATION: 'NEGOTIATION',
+  WON: 'WON',
   LOST: 'LOST',
-  COLD: 'COLD',
 } as const;
 export type LeadStatus = (typeof LeadStatus)[keyof typeof LeadStatus];
+
+export const ApprovalStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+export type ApprovalStatus = (typeof ApprovalStatus)[keyof typeof ApprovalStatus];
 
 export const LeadSource = {
   META_ADS: 'META_ADS',
@@ -65,26 +69,22 @@ export type ActivityType = (typeof ActivityType)[keyof typeof ActivityType];
 export const PIPELINE_STAGES: { status: LeadStatus; label: string; color: string }[] = [
   { status: 'NEW', label: 'New Lead', color: '#94A3B8' },
   { status: 'CONTACTED', label: 'Contacted', color: '#60A5FA' },
-  { status: 'INTERESTED', label: 'Interested', color: '#38BDF8' },
   { status: 'QUALIFIED', label: 'Qualified', color: '#A78BFA' },
-  { status: 'DEMO_SCHEDULED', label: 'Demo Booked', color: '#F59E0B' },
-  { status: 'DEMO_COMPLETED', label: 'Demo Done', color: '#FB923C' },
-  { status: 'ADMISSION_CONFIRMED', label: 'Admission Confirmed', color: '#22C55E' },
-  { status: 'PAYMENT_COMPLETED', label: 'Paid / Enrolled', color: '#16A34A' },
+  { status: 'PROPOSAL_SENT', label: 'Proposal Sent', color: '#F59E0B' },
+  { status: 'NEGOTIATION', label: 'Negotiation', color: '#FB923C' },
+  { status: 'WON', label: 'Won', color: '#16A34A' },
+  { status: 'LOST', label: 'Lost', color: '#EF4444' },
 ];
 
-/** Meta Conversion API event mapping (from PRD) */
+/** Meta Conversion API event mapping - generic sales funnel */
 export const META_EVENT_MAP: Record<LeadStatus, string | null> = {
   NEW: 'Lead',
   CONTACTED: 'Contact',
-  INTERESTED: 'Contact',
   QUALIFIED: 'QualifiedLead',
-  DEMO_SCHEDULED: 'Schedule',
-  DEMO_COMPLETED: 'Schedule',
-  ADMISSION_CONFIRMED: 'Purchase',
-  PAYMENT_COMPLETED: 'Purchase',
+  PROPOSAL_SENT: 'InitiateCheckout',
+  NEGOTIATION: 'AddPaymentInfo',
+  WON: 'Purchase',
   LOST: null,
-  COLD: null,
 };
 
 // --- DTOs ----------------------------------------------------------------
@@ -172,6 +172,6 @@ export interface CounselorStats {
   counselorName: string;
   totalLeads: number;
   byStatus: Record<LeadStatus, number>;
-  conversionRate: number; // 0..1
+  conversionRate: number;
   followUpsDue: number;
 }

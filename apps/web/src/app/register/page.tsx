@@ -3,10 +3,9 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { apiPost, tokens, userCache } from '@/lib/api';
-import type { LoginResponse } from '@oneplace/types';
+import { apiPost } from '@/lib/api';
 import { CheckCircle2 } from 'lucide-react';
 
 interface LicenseInfo {
@@ -17,7 +16,6 @@ interface LicenseInfo {
 }
 
 function RegisterForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const [form, setForm] = useState({
     tenantName: '',
@@ -33,6 +31,7 @@ function RegisterForm() {
   const [validating, setValidating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<string | null>(null);
 
   function update<K extends keyof typeof form>(k: K) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -74,19 +73,35 @@ function RegisterForm() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiPost<LoginResponse>('/auth/register-tenant', {
+      const res = await apiPost<{ pending: boolean; message: string }>('/auth/register-tenant', {
         ...form,
         tenantSlug: form.tenantSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
         licenseCode: form.licenseCode || undefined,
       });
-      tokens.set(res.accessToken, res.refreshToken);
-      userCache.set(res.user);
-      router.replace('/dashboard');
+      setSubmitted(
+        res.message ??
+          'Your workspace has been created and is awaiting approval. You will be notified by email once approved.',
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
+  }
+
+  if (submitted) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+        <div className="card w-full max-w-md space-y-4 p-8 text-center">
+          <CheckCircle2 className="mx-auto text-emerald-500" size={48} />
+          <h1 className="text-2xl font-bold text-navy-500">Workspace created!</h1>
+          <p className="text-sm text-slate-600">{submitted}</p>
+          <Link href="/login" className="btn-primary inline-flex">
+            Go to login
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -95,7 +110,8 @@ function RegisterForm() {
         <div>
           <h1 className="text-2xl font-bold text-navy-500">Create your Pipely workspace</h1>
           <p className="text-sm text-slate-500">
-            14-day trial. No card required. Have a license code? Enter below for premium access.
+            Sign up free. Have a license code? Enter below for premium access. New accounts are
+            reviewed before activation.
           </p>
         </div>
 
@@ -112,7 +128,8 @@ function RegisterForm() {
             <div className="mt-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
               <CheckCircle2 size={14} />
               <span>
-                Valid! <strong>{licenseInfo.plan}</strong> plan for <strong>{licenseInfo.validForDays} days</strong>
+                Valid! <strong>{licenseInfo.plan}</strong> plan for{' '}
+                <strong>{licenseInfo.validForDays} days</strong>
                 {licenseInfo.name && ` (${licenseInfo.name})`}
               </span>
             </div>
@@ -126,15 +143,21 @@ function RegisterForm() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-slate-500">Workspace Name</label>
-            <input className="input" required placeholder="e.g. OnePlace Digital Academy" value={form.tenantName} onChange={update('tenantName')} />
+            <label className="text-xs font-semibold text-slate-500">Business / Workspace Name</label>
+            <input
+              className="input"
+              required
+              placeholder="e.g. Acme Marketing"
+              value={form.tenantName}
+              onChange={update('tenantName')}
+            />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500">URL Slug</label>
             <input
               className="input"
               required
-              placeholder="oneplace"
+              placeholder="acme-marketing"
               value={form.tenantSlug}
               onChange={update('tenantSlug')}
             />
@@ -181,8 +204,12 @@ function RegisterForm() {
           </div>
         )}
 
-        <button type="submit" className="btn-gradient w-full" disabled={loading || (form.licenseCode.length > 0 && !licenseInfo)}>
-          {loading ? 'Creating...' : 'Create workspace & Start'}
+        <button
+          type="submit"
+          className="btn-gradient w-full"
+          disabled={loading || (form.licenseCode.length > 0 && !licenseInfo)}
+        >
+          {loading ? 'Creating...' : 'Create workspace'}
         </button>
 
         <p className="text-center text-sm text-slate-500">
@@ -196,5 +223,10 @@ function RegisterForm() {
   );
 }
 
-
-export default function RegisterPage() { return <Suspense fallback={null}><RegisterForm /></Suspense>; }
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
+  );
+}

@@ -53,6 +53,26 @@ superAdminRoutes.post('/tenants/:id/activate', async (req, res, next) => {
   }
 });
 
+superAdminRoutes.post('/tenants/:id/approve', async (req, res, next) => {
+  try {
+    res.json(await SuperAdminService.approve(req.params.id!));
+  } catch (e) {
+    next(e);
+  }
+});
+
+superAdminRoutes.post(
+  '/tenants/:id/reject',
+  validate({ body: z.object({ reason: z.string().min(3).max(500) }) }),
+  async (req, res, next) => {
+    try {
+      res.json(await SuperAdminService.reject(req.params.id!, req.body.reason));
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
 superAdminRoutes.post(
   '/tenants/:id/plan',
   validate({
