@@ -29,14 +29,11 @@ const createSchema = z.object({
       z.enum([
         'NEW',
         'CONTACTED',
-        'INTERESTED',
         'QUALIFIED',
-        'DEMO_SCHEDULED',
-        'DEMO_COMPLETED',
-        'ADMISSION_CONFIRMED',
-        'PAYMENT_COMPLETED',
+        'PROPOSAL_SENT',
+        'NEGOTIATION',
+        'WON',
         'LOST',
-        'COLD',
       ]),
     )
     .default([]),

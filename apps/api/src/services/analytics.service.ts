@@ -29,12 +29,10 @@ export const AnalyticsService = {
     const stages = [
       'NEW',
       'CONTACTED',
-      'INTERESTED',
       'QUALIFIED',
-      'DEMO_SCHEDULED',
-      'DEMO_COMPLETED',
-      'ADMISSION_CONFIRMED',
-      'PAYMENT_COMPLETED',
+      'PROPOSAL_SENT',
+      'NEGOTIATION',
+      'WON',
     ];
     return {
       total,
@@ -48,7 +46,6 @@ export const AnalyticsService = {
             : (map[s] ?? 0) / (map[stages[i - 1]!] ?? 1),
       })),
       lost: map['LOST'] ?? 0,
-      cold: map['COLD'] ?? 0,
     };
   },
 
@@ -61,7 +58,7 @@ export const AnalyticsService = {
     });
     const converted = await prisma.lead.groupBy({
       by: ['source'],
-      where: { tenantId, status: 'PAYMENT_COMPLETED' },
+      where: { tenantId, status: 'WON' },
       _count: { _all: true },
     });
     const cMap: Record<string, number> = {};
@@ -93,7 +90,7 @@ export const AnalyticsService = {
       SELECT extract(epoch from ("convertedAt" - "createdAt")) / 86400.0 AS days
       FROM leads
       WHERE "tenantId" = ${tenantId}
-        AND "status" = 'PAYMENT_COMPLETED'
+        AND "status" = 'WON'
         AND "convertedAt" IS NOT NULL
       ORDER BY days
     `);
@@ -114,7 +111,7 @@ export const AnalyticsService = {
     for (const c of counselors) {
       const total = await prisma.lead.count({ where: { tenantId, assignedToId: c.id } });
       const converted = await prisma.lead.count({
-        where: { tenantId, assignedToId: c.id, status: 'PAYMENT_COMPLETED' },
+        where: { tenantId, assignedToId: c.id, status: 'WON' },
       });
       rows.push({
         counselorId: c.id,

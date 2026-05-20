@@ -22,12 +22,11 @@ interface T2C { median: number | null; p90: number | null; count: number }
 const STAGE_LABEL: Record<string, string> = {
   NEW: 'New',
   CONTACTED: 'Contacted',
-  INTERESTED: 'Interested',
   QUALIFIED: 'Qualified',
-  DEMO_SCHEDULED: 'Demo Booked',
-  DEMO_COMPLETED: 'Demo Done',
-  ADMISSION_CONFIRMED: 'Admission ✓',
-  PAYMENT_COMPLETED: 'Paid',
+  PROPOSAL_SENT: 'Proposal Sent',
+  NEGOTIATION: 'Negotiation',
+  WON: 'Won',
+  LOST: 'Lost',
 };
 
 export default function AnalyticsPage() {

@@ -145,7 +145,7 @@ export const LeadService = {
           nextFollowUpAt: input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null,
         }),
         ...(input.lostReason !== undefined && { lostReason: input.lostReason }),
-        ...(input.status === 'PAYMENT_COMPLETED' && { convertedAt: new Date() }),
+        ...(input.status === 'WON' && { convertedAt: new Date() }),
       },
     });
 
@@ -242,14 +242,14 @@ export const LeadService = {
       for (const g of grouped) {
         byStatus[g.status] = g._count._all;
         total += g._count._all;
-        if (g.status === 'PAYMENT_COMPLETED') converted += g._count._all;
+        if (g.status === 'WON') converted += g._count._all;
       }
       const followUpsDue = await prisma.lead.count({
         where: {
           tenantId,
           assignedToId: c.id,
           nextFollowUpAt: { lte: new Date() },
-          status: { notIn: ['PAYMENT_COMPLETED', 'LOST'] },
+          status: { notIn: ['WON', 'LOST'] },
         },
       });
       out.push({

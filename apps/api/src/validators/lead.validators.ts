@@ -17,14 +17,11 @@ export const leadSourceSchema = z.enum([
 export const leadStatusSchema = z.enum([
   'NEW',
   'CONTACTED',
-  'INTERESTED',
   'QUALIFIED',
-  'DEMO_SCHEDULED',
-  'DEMO_COMPLETED',
-  'ADMISSION_CONFIRMED',
-  'PAYMENT_COMPLETED',
+  'PROPOSAL_SENT',
+  'NEGOTIATION',
+  'WON',
   'LOST',
-  'COLD',
 ]);
 
 export const activityTypeSchema = z.enum([
