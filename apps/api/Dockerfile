@@ -2,7 +2,8 @@
 # Single-stage build for @oneplace/api with pnpm hoisted node-linker.
 # NOTE: NODE_ENV must NOT be 'production' during install (skips devDeps needed for tsc).
 
-FROM node:20-alpine
+FROM node:20-slim
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 WORKDIR /repo
 
