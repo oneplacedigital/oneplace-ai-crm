@@ -21,6 +21,27 @@ interface EmailTemplate {
   name: string;
 }
 
+const SOURCE_OPTIONS = [
+  'META_ADS', 'GOOGLE_ADS', 'WEBSITE_FORM', 'WHATSAPP',
+  'REFERRAL', 'PHONE_CALL', 'MANUAL', 'OTHER',
+];
+const CONDITION_FIELDS = [
+  { value: 'source', label: 'Lead Source' },
+  { value: 'city', label: 'City' },
+  { value: 'status', label: 'Status' },
+  { value: 'score', label: 'Score' },
+];
+const CONDITION_OPS = [
+  { value: 'equals', label: 'is' },
+  { value: 'not_equals', label: 'is not' },
+  { value: 'contains', label: 'contains' },
+  { value: 'greater_than', label: 'greater than' },
+  { value: 'less_than', label: 'less than' },
+  { value: 'is_empty', label: 'is empty' },
+  { value: 'is_not_empty', label: 'is not empty' },
+];
+type Rule = { field: string; operator: string; value: string };
+
 export default function WorkflowsPage() {
   const { data, mutate } = useSWR<Workflow[]>('/workflows', apiGet);
   const [showNew, setShowNew] = useState(false);
@@ -72,8 +93,20 @@ export default function WorkflowsPage() {
               </label>
             </div>
 
+            {(() => {
+              const cond = w.actions.find((a) => a.type === 'CONDITIONS');
+              if (!cond) return null;
+              const cRules = (cond.params.rules as Rule[] | undefined) ?? [];
+              const m = String(cond.params.match ?? 'ALL');
+              return (
+                <div className="mt-2 rounded bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+                  Only if {m} match:{' '}
+                  {cRules.map((r) => `${r.field} ${r.operator} ${r.value}`).join(', ')}
+                </div>
+              );
+            })()}
             <ul className="mt-3 space-y-1 text-sm text-slate-600">
-              {w.actions.map((a, i) => (
+              {w.actions.filter((a) => a.type !== 'CONDITIONS').map((a, i) => (
                 <li key={i} className="rounded bg-slate-50 px-3 py-1.5">
                   <span className="font-mono text-xs text-brand">{a.type}</span>
                   {Object.keys(a.params).length > 0 && (
@@ -116,8 +149,20 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [actionType, setActionType] = useState('SEND_EMAIL');
   const [emailTemplateId, setEmailTemplateId] = useState('');
   const [actionJson, setActionJson] = useState('{"templateName":"oneplace_welcome","language":"en"}');
+  const [match, setMatch] = useState('ALL');
+  const [rules, setRules] = useState<Rule[]>([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  function addRule() {
+    setRules((r) => [...r, { field: 'source', operator: 'equals', value: '' }]);
+  }
+  function updateRule(i: number, patch: Partial<Rule>) {
+    setRules((r) => r.map((rule, idx) => (idx === i ? { ...rule, ...patch } : rule)));
+  }
+  function removeRule(i: number) {
+    setRules((r) => r.filter((_, idx) => idx !== i));
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -135,11 +180,18 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
       } else {
         params = JSON.parse(actionJson || '{}');
       }
+      const builtActions: Array<{ type: string; params: Record<string, unknown> }> = [
+        { type: actionType, params },
+      ];
+      const validRules = rules.filter((r) => r.field && r.operator);
+      if (validRules.length > 0) {
+        builtActions.unshift({ type: 'CONDITIONS', params: { match, rules: validRules } });
+      }
       await apiPost('/workflows', {
         name,
         trigger,
         triggerStatuses: trigger === 'LEAD_STATUS_CHANGED' ? statuses : [],
-        actions: [{ type: actionType, params }],
+        actions: builtActions,
       });
       onCreated();
       onClose();
@@ -193,6 +245,89 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
             </div>
           </div>
         )}
+
+        <div className="rounded-lg border border-slate-200 p-3">
+          <div className="flex flex-wrap items-center gap-1 text-xs font-semibold text-slate-500">
+            Run only when
+            <select
+              className="rounded border border-slate-300 px-1 py-0.5 text-xs"
+              value={match}
+              onChange={(e) => setMatch(e.target.value)}
+            >
+              <option value="ALL">ALL</option>
+              <option value="ANY">ANY</option>
+            </select>
+            of these conditions match (optional)
+          </div>
+          {rules.map((r, i) => (
+            <div key={i} className="mt-2 flex flex-wrap items-center gap-1">
+              <select
+                className="input max-w-[130px] text-xs"
+                value={r.field}
+                onChange={(e) => updateRule(i, { field: e.target.value, value: '' })}
+              >
+                {CONDITION_FIELDS.map((cf) => (
+                  <option key={cf.value} value={cf.value}>{cf.label}</option>
+                ))}
+              </select>
+              <select
+                className="input max-w-[120px] text-xs"
+                value={r.operator}
+                onChange={(e) => updateRule(i, { operator: e.target.value })}
+              >
+                {CONDITION_OPS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              {r.operator !== 'is_empty' && r.operator !== 'is_not_empty' && (
+                r.field === 'source' ? (
+                  <select
+                    className="input max-w-[150px] text-xs"
+                    value={r.value}
+                    onChange={(e) => updateRule(i, { value: e.target.value })}
+                  >
+                    <option value="">— value —</option>
+                    {SOURCE_OPTIONS.map((so) => (
+                      <option key={so} value={so}>{so}</option>
+                    ))}
+                  </select>
+                ) : r.field === 'status' ? (
+                  <select
+                    className="input max-w-[150px] text-xs"
+                    value={r.value}
+                    onChange={(e) => updateRule(i, { value: e.target.value })}
+                  >
+                    <option value="">— value —</option>
+                    {PIPELINE_STAGES.map((st) => (
+                      <option key={st.status} value={st.status}>{st.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="input max-w-[150px] text-xs"
+                    placeholder="value"
+                    value={r.value}
+                    onChange={(e) => updateRule(i, { value: e.target.value })}
+                  />
+                )
+              )}
+              <button
+                type="button"
+                onClick={() => removeRule(i)}
+                className="text-xs font-semibold text-red-600 hover:underline"
+              >
+                remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addRule}
+            className="mt-2 text-xs font-semibold text-brand hover:underline"
+          >
+            + Add condition
+          </button>
+        </div>
 
         <select
           className="input"

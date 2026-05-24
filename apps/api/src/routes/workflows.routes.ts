@@ -10,6 +10,7 @@ workflowsRoutes.use(requireAuth);
 
 const actionSchema = z.object({
   type: z.enum([
+    'CONDITIONS',
     'SEND_EMAIL',
     'START_EMAIL_SEQUENCE',
     'SEND_WHATSAPP_TEMPLATE',

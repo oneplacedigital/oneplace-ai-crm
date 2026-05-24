@@ -164,6 +164,41 @@ async function runAction(
   }
 }
 
+type ConditionRule = { field: string; operator: string; value: string };
+
+function evaluateRule(rule: ConditionRule, lead: Lead): boolean {
+  const raw = (lead as unknown as Record<string, unknown>)[rule.field];
+  const fieldStr = raw == null ? '' : String(raw);
+  const val = String(rule.value ?? '');
+  switch (rule.operator) {
+    case 'equals':
+      return fieldStr.toLowerCase() === val.toLowerCase();
+    case 'not_equals':
+      return fieldStr.toLowerCase() !== val.toLowerCase();
+    case 'contains':
+      return fieldStr.toLowerCase().includes(val.toLowerCase());
+    case 'greater_than':
+      return Number(raw) > Number(val);
+    case 'less_than':
+      return Number(raw) < Number(val);
+    case 'is_empty':
+      return fieldStr.trim() === '';
+    case 'is_not_empty':
+      return fieldStr.trim() !== '';
+    default:
+      return true;
+  }
+}
+
+/** Zoho-style criteria — the workflow runs only when the lead matches. */
+function evaluateConditions(params: Record<string, unknown>, lead: Lead): boolean {
+  const rules = (params['rules'] as ConditionRule[] | undefined) ?? [];
+  if (rules.length === 0) return true;
+  const match = String(params['match'] ?? 'ALL').toUpperCase();
+  const checks = rules.map((r) => evaluateRule(r, lead));
+  return match === 'ANY' ? checks.some(Boolean) : checks.every(Boolean);
+}
+
 export const WorkflowEngine = {
   async dispatch(event: EventType, ctx: { tenantId: string; leadId: string; toStatus?: LeadStatus }) {
     try {
@@ -186,6 +221,11 @@ export const WorkflowEngine = {
       });
 
       for (const wf of matched) {
+        const allActions = (wf.actions as unknown as ActionDef[]) ?? [];
+        const condAction = allActions.find((a) => a.type === 'CONDITIONS');
+        if (condAction && !evaluateConditions(condAction.params, lead)) {
+          continue; // lead does not match this workflow's conditions
+        }
         const run = await prisma.workflowRun.create({
           data: {
             tenantId: ctx.tenantId,
@@ -194,7 +234,7 @@ export const WorkflowEngine = {
             status: 'PENDING',
           },
         });
-        const actions = (wf.actions as unknown as ActionDef[]) ?? [];
+        const actions = allActions.filter((a) => a.type !== 'CONDITIONS');
         const results: Array<{ type: string; ok: boolean; detail?: unknown }> = [];
         for (const action of actions) {
           const r = await runAction(action, { tenantId: ctx.tenantId, lead });
