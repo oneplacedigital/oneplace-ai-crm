@@ -73,6 +73,18 @@ integrationsRoutes.put(
   },
 );
 
+integrationsRoutes.post(
+  '/meta/test',
+  requireRole('TENANT_ADMIN', 'MANAGER'),
+  async (req, res, next) => {
+    try {
+      res.json(await MetaService.testConnection(req.auth!.tid));
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
 integrationsRoutes.put(
   '/whatsapp',
   requireRole('TENANT_ADMIN'),

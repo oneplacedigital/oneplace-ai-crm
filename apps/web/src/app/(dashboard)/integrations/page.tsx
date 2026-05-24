@@ -34,6 +34,8 @@ function MetaCard({ status, onSaved }: { status?: Status['meta']; onSaved: () =>
   const [adAccountId, setAdAccountId] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function save() {
     setSaving(true);
@@ -54,6 +56,23 @@ function MetaCard({ status, onSaved }: { status?: Status['meta']; onSaved: () =>
       setMsg(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function runTest() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const r = await apiPost<{ tokenValid: boolean; leadCreated: boolean; message: string }>(
+        '/integrations/meta/test',
+        {},
+      );
+      setTestResult({ ok: r.tokenValid, text: r.message });
+      if (r.leadCreated) onSaved();
+    } catch (e) {
+      setTestResult({ ok: false, text: e instanceof Error ? e.message : 'Test failed' });
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -116,6 +135,29 @@ function MetaCard({ status, onSaved }: { status?: Status['meta']; onSaved: () =>
           {saving ? 'Saving…' : 'Save credentials'}
         </button>
         {msg && <span className="text-sm text-slate-500">{msg}</span>}
+      </div>
+
+      <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="text-xs font-semibold text-navy-500">Test connection</div>
+        <p className="mt-1 text-xs text-slate-500">
+          Checks your saved token against Meta and drops a sample Meta lead into your pipeline so
+          you can confirm the link works.
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button type="button" className="btn-secondary" onClick={runTest} disabled={testing}>
+            {testing ? 'Testing…' : 'Run Meta test'}
+          </button>
+          {testResult && (
+            <span
+              className={`text-xs font-semibold ${
+                testResult.ok ? 'text-emerald-600' : 'text-red-600'
+              }`}
+            >
+              {testResult.ok ? '✓ ' : '✕ '}
+              {testResult.text}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">

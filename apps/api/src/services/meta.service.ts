@@ -268,4 +268,81 @@ export const MetaService = {
       select: { id: true, metaPixelId: true, metaAdAccountId: true },
     });
   },
+
+  /**
+   * Verify the saved Meta access token against the Graph API, then create a
+   * sample Lead-Ads-sourced lead so the user can confirm the pipeline visually.
+   */
+  async testConnection(tenantId: string) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) return { tokenValid: false, leadCreated: false, message: 'Tenant not found' };
+    if (!tenant.metaAccessToken) {
+      return {
+        tokenValid: false,
+        leadCreated: false,
+        message: 'No Meta access token saved yet. Save your credentials above first.',
+      };
+    }
+
+    // 1. Validate the token by asking Meta who it belongs to.
+    let tokenValid = false;
+    let metaAccount: { id: string; name?: string } | null = null;
+    let metaError = 'unknown error';
+    try {
+      const accessToken = decrypt(tenant.metaAccessToken);
+      const res = await fetch(
+        `${GRAPH_BASE}/me?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
+      );
+      const data = (await res.json().catch(() => null)) as
+        | { id?: string; name?: string; error?: { message?: string } }
+        | null;
+      if (res.ok && data?.id) {
+        tokenValid = true;
+        metaAccount = { id: data.id, name: data.name };
+      } else {
+        metaError = data?.error?.message ?? `Meta returned HTTP ${res.status}`;
+      }
+    } catch (e) {
+      metaError = e instanceof Error ? e.message : 'Graph API request failed';
+    }
+
+    if (!tokenValid) {
+      logger.warn({ tenantId, metaError }, 'Meta connection test failed');
+      return {
+        tokenValid: false,
+        leadCreated: false,
+        message: `Meta rejected the token: ${metaError}`,
+      };
+    }
+
+    // 2. Token works — create a sample Meta-sourced test lead.
+    const lead = await prisma.lead.create({
+      data: {
+        tenantId,
+        fullName: 'Meta Test Lead',
+        phone: `+91${String(Date.now()).slice(-10)}`,
+        city: tenant.city ?? 'Nashik',
+        source: 'META_ADS' as LeadSource,
+        sourceDetail: 'Integration test',
+        tags: ['test'],
+      },
+    });
+    await prisma.leadActivity.create({
+      data: {
+        tenantId,
+        leadId: lead.id,
+        type: 'SYSTEM',
+        title: 'Test lead created via Meta integration test',
+        metadata: { test: true, metaAccount } as Prisma.JsonObject,
+      },
+    });
+
+    return {
+      tokenValid: true,
+      metaAccount,
+      leadCreated: true,
+      leadId: lead.id,
+      message: `Connected to Meta as "${metaAccount?.name ?? metaAccount?.id}". Test lead created — see it in Leads.`,
+    };
+  },
 };
