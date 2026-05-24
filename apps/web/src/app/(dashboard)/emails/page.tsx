@@ -165,6 +165,62 @@ export default function EmailsPage() {
   );
 }
 
+/** Ready-to-use starter templates — click to prefill the form, then customise. */
+const STARTER_TEMPLATES: { label: string; name: string; subject: string; bodyHtml: string }[] = [
+  {
+    label: 'Welcome',
+    name: 'Welcome - Enquiry Received',
+    subject: 'Thanks for reaching out, {{lead.firstName}}',
+    bodyHtml:
+      '<p>Hi {{lead.firstName}},</p>\n' +
+      "<p>Thanks for getting in touch — we've received your enquiry and a member of our team will reach out to you shortly.</p>\n" +
+      '<p>In the meantime, feel free to reply to this email with any questions you have.</p>\n' +
+      '<p>Best regards,<br/>The Team</p>',
+  },
+  {
+    label: 'Follow-up',
+    name: 'Follow-up - No Response',
+    subject: 'Still interested, {{lead.firstName}}?',
+    bodyHtml:
+      '<p>Hi {{lead.firstName}},</p>\n' +
+      "<p>I tried reaching you earlier and didn't want this to slip through. Are you still looking for help with this?</p>\n" +
+      "<p>Just reply with a good time to talk and I'll make it work.</p>\n" +
+      '<p>Best regards,<br/>The Team</p>',
+  },
+  {
+    label: 'Proposal',
+    name: 'Proposal - Details Sent',
+    subject: 'The details you asked for, {{lead.firstName}}',
+    bodyHtml:
+      '<p>Hi {{lead.firstName}},</p>\n' +
+      '<p>As promised, here is a quick summary of what we discussed:</p>\n' +
+      '<ul><li><strong>What you get:</strong> ...</li><li><strong>Timeline:</strong> ...</li><li><strong>Investment:</strong> ...</li></ul>\n' +
+      '<p>Happy to jump on a short call to walk you through it. When works best for you?</p>\n' +
+      '<p>Best regards,<br/>The Team</p>',
+  },
+  {
+    label: 'Re-engage',
+    name: 'Re-engagement - Cold Lead',
+    subject: 'Should I close your file, {{lead.firstName}}?',
+    bodyHtml:
+      '<p>Hi {{lead.firstName}},</p>\n' +
+      "<p>I haven't heard back, so I wanted to check in one last time before closing things on my end.</p>\n" +
+      "<p>If now isn't the right time, no problem at all — just let me know and I'll follow up later. If you're ready, reply here and we'll pick up where we left off.</p>\n" +
+      '<p>Best regards,<br/>The Team</p>',
+  },
+  {
+    label: 'Thank You',
+    name: 'Thank You - Welcome Aboard',
+    subject: 'Welcome aboard, {{lead.firstName}}!',
+    bodyHtml:
+      '<p>Hi {{lead.firstName}},</p>\n' +
+      "<p>Thank you for choosing to work with us — we're glad to have you on board.</p>\n" +
+      '<p>Our team will be in touch within one working day to get you started.</p>\n' +
+      '<p>If you need anything at all, just reply to this email.</p>\n' +
+      '<p>Best regards,<br/>The Team</p>',
+  },
+];
+
 function TemplateModal({
   template,
   onClose,
@@ -176,11 +232,8 @@ function TemplateModal({
 }) {
   const [form, setForm] = useState({
     name: template?.name ?? '',
-    subject: template?.subject ?? 'Welcome to {{lead.firstName}}!',
-    bodyHtml: template?.bodyHtml ?? `<p>Hi {{lead.firstName}},</p>
-<p>Thanks for showing interest in OnePlace Digital Academy.</p>
-<p>Reply to this email or WhatsApp us at +91 95296 22968 to schedule your demo.</p>
-<p>Best,<br/>OnePlace Team</p>`,
+    subject: template?.subject ?? STARTER_TEMPLATES[0]!.subject,
+    bodyHtml: template?.bodyHtml ?? STARTER_TEMPLATES[0]!.bodyHtml,
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -210,6 +263,27 @@ function TemplateModal({
         <h3 className="text-lg font-bold text-navy-500">
           {template ? 'Edit Template' : 'New Email Template'}
         </h3>
+        {!template && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="mb-2 text-xs font-semibold text-slate-500">
+              Start from a ready-made template:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {STARTER_TEMPLATES.map((st) => (
+                <button
+                  key={st.label}
+                  type="button"
+                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-navy-500 hover:border-brand hover:text-brand"
+                  onClick={() =>
+                    setForm({ name: st.name, subject: st.subject, bodyHtml: st.bodyHtml })
+                  }
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <input
           className="input"
           placeholder="Template name (internal)"

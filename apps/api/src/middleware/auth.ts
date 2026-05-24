@@ -21,6 +21,8 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 export function requireRole(...allowed: UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.auth) return next(Unauthorized());
+    // SUPER_ADMIN is the platform owner and passes every role gate.
+    if (req.auth.role === 'SUPER_ADMIN') return next();
     if (!allowed.includes(req.auth.role as UserRole)) return next(Forbidden());
     return next();
   };
