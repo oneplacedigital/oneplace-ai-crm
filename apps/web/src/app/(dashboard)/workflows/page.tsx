@@ -148,6 +148,7 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [statuses, setStatuses] = useState<string[]>([]);
   const [actionType, setActionType] = useState('SEND_EMAIL');
   const [emailTemplateId, setEmailTemplateId] = useState('');
+  const [notifyEmail, setNotifyEmail] = useState('');
   const [actionJson, setActionJson] = useState('{"templateName":"oneplace_welcome","language":"en"}');
   const [match, setMatch] = useState('ALL');
   const [rules, setRules] = useState<Rule[]>([]);
@@ -177,6 +178,8 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
           return;
         }
         params = { templateId: emailTemplateId };
+      } else if (actionType === 'NOTIFY_ADMIN') {
+        params = notifyEmail.trim() ? { toEmail: notifyEmail.trim() } : {};
       } else {
         params = JSON.parse(actionJson || '{}');
       }
@@ -340,6 +343,7 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
           <option value="SET_FOLLOWUP">Set follow-up reminder</option>
           <option value="SET_STATUS">Set status</option>
           <option value="SEND_META_EVENT">Send Meta Conversion event</option>
+          <option value="NOTIFY_ADMIN">Notify admin (email)</option>
           <option value="NOTIFY_COUNSELOR">Notify counselor</option>
         </select>
         {actionType === 'SEND_EMAIL' ? (
@@ -362,6 +366,22 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
                 No email templates yet — create one under Email Automation first.
               </p>
             )}
+          </div>
+        ) : actionType === 'NOTIFY_ADMIN' ? (
+          <div>
+            <label className="text-xs font-semibold text-slate-500">
+              Send the notification to (optional)
+            </label>
+            <input
+              className="input"
+              placeholder="Leave blank to use your workspace admin email"
+              value={notifyEmail}
+              onChange={(e) => setNotifyEmail(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              An email with the lead&apos;s name, phone, source and a link is sent each time this
+              workflow fires.
+            </p>
           </div>
         ) : (
           <textarea

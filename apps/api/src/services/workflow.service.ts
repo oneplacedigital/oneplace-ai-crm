@@ -156,6 +156,44 @@ async function runAction(
         });
         return { ok: true };
       }
+      case 'NOTIFY_ADMIN': {
+        const tenant = await prisma.tenant.findUnique({ where: { id: ctx.tenantId } });
+        const toEmail = String(action.params['toEmail'] ?? '').trim() || tenant?.email;
+        if (!toEmail) return { ok: false, detail: 'no_admin_email' };
+        const lead = ctx.lead;
+        const subject = interpolate(
+          String(action.params['subject'] ?? 'New lead: {{lead.fullName}}'),
+          lead,
+        );
+        const leadUrl = `https://pipely-saas.vercel.app/leads/${lead.id}`;
+        const bodyHtml =
+          `<p>A lead needs your attention in your CRM.</p>` +
+          `<table cellpadding="6" style="border-collapse:collapse;font-size:14px">` +
+          `<tr><td><strong>Name</strong></td><td>${lead.fullName}</td></tr>` +
+          `<tr><td><strong>Phone</strong></td><td>${lead.phone}</td></tr>` +
+          `<tr><td><strong>Email</strong></td><td>${lead.email ?? '-'}</td></tr>` +
+          `<tr><td><strong>City</strong></td><td>${lead.city ?? '-'}</td></tr>` +
+          `<tr><td><strong>Source</strong></td><td>${lead.source}</td></tr>` +
+          `<tr><td><strong>Status</strong></td><td>${lead.status}</td></tr>` +
+          `</table>` +
+          `<p><a href="${leadUrl}">Open this lead in the CRM</a></p>`;
+        const r = await EmailService.send({
+          tenantId: ctx.tenantId,
+          toEmail,
+          subject,
+          bodyHtml,
+        });
+        await prisma.leadActivity.create({
+          data: {
+            tenantId: ctx.tenantId,
+            leadId: lead.id,
+            type: 'SYSTEM',
+            title: `Admin notified of lead (${toEmail})`,
+          },
+        });
+        return { ok: r.sent ?? false, detail: r };
+      }
+
       default:
         return { ok: false, detail: `unknown_action:${action.type}` };
     }

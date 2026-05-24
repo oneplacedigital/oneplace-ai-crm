@@ -19,6 +19,7 @@ const actionSchema = z.object({
     'SET_STATUS',
     'SEND_META_EVENT',
     'NOTIFY_COUNSELOR',
+    'NOTIFY_ADMIN',
   ]),
   params: z.record(z.any()).default({}),
 });
