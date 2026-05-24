@@ -29,7 +29,9 @@ integrationsRoutes.get('/status', async (req, res, next) => {
     });
     res.json({
       meta: {
-        configured: Boolean(t?.metaAccessToken && t?.metaPixelId),
+        // Meta is "connected" once the access token is saved (lead capture).
+        // The Pixel ID is only needed for outbound Conversion API events.
+        configured: Boolean(t?.metaAccessToken),
         pixelId: t?.metaPixelId ?? null,
         adAccountId: t?.metaAdAccountId ?? null,
         tokenSet: Boolean(t?.metaAccessToken),
@@ -47,14 +49,14 @@ integrationsRoutes.get('/status', async (req, res, next) => {
 });
 
 const metaSchema = z.object({
-  metaPixelId: z.string().optional(),
-  metaAccessToken: z.string().optional(),
-  metaAdAccountId: z.string().optional(),
+  metaPixelId: z.string().trim().optional(),
+  metaAccessToken: z.string().trim().optional(),
+  metaAdAccountId: z.string().trim().optional(),
 });
 const whatsappSchema = z.object({
-  whatsappPhoneId: z.string().optional(),
-  whatsappBizId: z.string().optional(),
-  whatsappToken: z.string().optional(),
+  whatsappPhoneId: z.string().trim().optional(),
+  whatsappBizId: z.string().trim().optional(),
+  whatsappToken: z.string().trim().optional(),
 });
 
 integrationsRoutes.put(
