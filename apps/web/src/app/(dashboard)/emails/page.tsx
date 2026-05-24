@@ -231,6 +231,21 @@ function fillPreview(text: string): string {
     .replaceAll('{{lead.city}}', 'Nashik');
 }
 
+/** Header-image block markers — round-trip a header image without a DB column. */
+const HEADER_RE = /^<!--PIPELY_HEADER-->[\s\S]*?<!--\/PIPELY_HEADER-->\n?/;
+function buildHeaderHtml(url: string): string {
+  return `<!--PIPELY_HEADER--><img src="${url}" alt="" style="display:block;width:100%;max-width:600px;margin:0 auto" /><!--/PIPELY_HEADER-->\n`;
+}
+function extractHeader(html: string): { headerUrl: string; body: string } {
+  const m = html.match(HEADER_RE);
+  if (!m) return { headerUrl: '', body: html };
+  const src = m[0].match(/src="([^"]*)"/);
+  return { headerUrl: src?.[1] ?? '', body: html.replace(HEADER_RE, '') };
+}
+function composeBody(headerUrl: string, body: string): string {
+  return (headerUrl.trim() ? buildHeaderHtml(headerUrl.trim()) : '') + body;
+}
+
 function TemplateModal({
   template,
   onClose,
@@ -240,10 +255,12 @@ function TemplateModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const initial = extractHeader(template?.bodyHtml ?? STARTER_TEMPLATES[0]!.bodyHtml);
   const [form, setForm] = useState({
     name: template?.name ?? '',
     subject: template?.subject ?? STARTER_TEMPLATES[0]!.subject,
-    bodyHtml: template?.bodyHtml ?? STARTER_TEMPLATES[0]!.bodyHtml,
+    headerImage: initial.headerUrl,
+    bodyHtml: initial.body,
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -254,10 +271,15 @@ function TemplateModal({
     setSaving(true);
     setErr(null);
     try {
+      const payload = {
+        name: form.name,
+        subject: form.subject,
+        bodyHtml: composeBody(form.headerImage, form.bodyHtml),
+      };
       if (template) {
-        await apiPost(`/emails/templates/${template.id}`, form);
+        await apiPost(`/emails/templates/${template.id}`, payload);
       } else {
-        await apiPost('/emails/templates', form);
+        await apiPost('/emails/templates', payload);
       }
       onSaved();
       onClose();
@@ -286,7 +308,12 @@ function TemplateModal({
                   type="button"
                   className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-navy-500 hover:border-brand hover:text-brand"
                   onClick={() =>
-                    setForm({ name: st.name, subject: st.subject, bodyHtml: st.bodyHtml })
+                    setForm((curr) => ({
+                      ...curr,
+                      name: st.name,
+                      subject: st.subject,
+                      bodyHtml: st.bodyHtml,
+                    }))
                   }
                 >
                   {st.label}
@@ -309,6 +336,29 @@ function TemplateModal({
           value={form.subject}
           onChange={(e) => setForm({ ...form, subject: e.target.value })}
         />
+        <div>
+          <label className="text-xs font-semibold text-slate-500">
+            Header image URL (optional)
+          </label>
+          <input
+            className="input"
+            placeholder="https://your-site.com/email-banner.jpg"
+            value={form.headerImage}
+            onChange={(e) => setForm({ ...form, headerImage: e.target.value })}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Shown as a banner at the top of the email. Paste a hosted image link (JPG/PNG),
+            ideally 600px wide.
+          </p>
+          {form.headerImage.trim() && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={form.headerImage.trim()}
+              alt="Header preview"
+              className="mt-2 max-h-28 rounded border border-slate-200"
+            />
+          )}
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">Email body (HTML)</span>
           <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5">
@@ -342,7 +392,11 @@ function TemplateModal({
             </div>
             <div
               className="p-4 text-sm leading-relaxed text-slate-700"
-              dangerouslySetInnerHTML={{ __html: fillPreview(form.bodyHtml) || '<p>Nothing to preview yet.</p>' }}
+              dangerouslySetInnerHTML={{
+                __html:
+                  fillPreview(composeBody(form.headerImage, form.bodyHtml)) ||
+                  '<p>Nothing to preview yet.</p>',
+              }}
             />
           </div>
         ) : (
