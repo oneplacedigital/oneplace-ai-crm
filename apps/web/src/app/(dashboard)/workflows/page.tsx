@@ -16,6 +16,11 @@ interface Workflow {
   _count?: { runs: number };
 }
 
+interface EmailTemplate {
+  id: string;
+  name: string;
+}
+
 export default function WorkflowsPage() {
   const { data, mutate } = useSWR<Workflow[]>('/workflows', apiGet);
   const [showNew, setShowNew] = useState(false);
@@ -35,7 +40,7 @@ export default function WorkflowsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy-500">Workflows</h1>
-          <p className="text-sm text-slate-500">Automate WhatsApp, Meta events, follow-ups, and assignments.</p>
+          <p className="text-sm text-slate-500">Automate email, WhatsApp, follow-ups, and assignments.</p>
         </div>
         <button className="btn-primary" onClick={() => setShowNew(true)}>
           <Plus size={16} /> New Workflow
@@ -104,10 +109,12 @@ export default function WorkflowsPage() {
 }
 
 function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { data: templates } = useSWR<EmailTemplate[]>('/emails/templates', apiGet);
   const [name, setName] = useState('');
   const [trigger, setTrigger] = useState('LEAD_CREATED');
   const [statuses, setStatuses] = useState<string[]>([]);
-  const [actionType, setActionType] = useState('SEND_WHATSAPP_TEMPLATE');
+  const [actionType, setActionType] = useState('SEND_EMAIL');
+  const [emailTemplateId, setEmailTemplateId] = useState('');
   const [actionJson, setActionJson] = useState('{"templateName":"oneplace_welcome","language":"en"}');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -117,7 +124,17 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
     setSaving(true);
     setErr(null);
     try {
-      const params = JSON.parse(actionJson || '{}');
+      let params: Record<string, unknown>;
+      if (actionType === 'SEND_EMAIL') {
+        if (!emailTemplateId) {
+          setErr('Please choose an email template to send.');
+          setSaving(false);
+          return;
+        }
+        params = { templateId: emailTemplateId };
+      } else {
+        params = JSON.parse(actionJson || '{}');
+      }
       await apiPost('/workflows', {
         name,
         trigger,
@@ -182,6 +199,7 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
           value={actionType}
           onChange={(e) => setActionType(e.target.value)}
         >
+          <option value="SEND_EMAIL">Send email (template)</option>
           <option value="SEND_WHATSAPP_TEMPLATE">Send WhatsApp template</option>
           <option value="ASSIGN_COUNSELOR">Assign counselor (round-robin)</option>
           <option value="SET_FOLLOWUP">Set follow-up reminder</option>
@@ -189,12 +207,35 @@ function NewWorkflow({ onClose, onCreated }: { onClose: () => void; onCreated: (
           <option value="SEND_META_EVENT">Send Meta Conversion event</option>
           <option value="NOTIFY_COUNSELOR">Notify counselor</option>
         </select>
-        <textarea
-          className="input min-h-[80px] font-mono text-xs"
-          placeholder='{"templateName":"oneplace_welcome","language":"en"}'
-          value={actionJson}
-          onChange={(e) => setActionJson(e.target.value)}
-        />
+        {actionType === 'SEND_EMAIL' ? (
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Email template to send</label>
+            <select
+              className="input"
+              value={emailTemplateId}
+              onChange={(e) => setEmailTemplateId(e.target.value)}
+            >
+              <option value="">— Choose a template —</option>
+              {templates?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            {templates && templates.length === 0 && (
+              <p className="mt-1 text-xs text-amber-600">
+                No email templates yet — create one under Email Automation first.
+              </p>
+            )}
+          </div>
+        ) : (
+          <textarea
+            className="input min-h-[80px] font-mono text-xs"
+            placeholder='{"templateName":"oneplace_welcome","language":"en"}'
+            value={actionJson}
+            onChange={(e) => setActionJson(e.target.value)}
+          />
+        )}
         {err && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>
