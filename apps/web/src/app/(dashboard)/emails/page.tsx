@@ -221,6 +221,16 @@ const STARTER_TEMPLATES: { label: string; name: string; subject: string; bodyHtm
   },
 ];
 
+/** Replace {{lead.*}} variables with sample values so the user can preview the email. */
+function fillPreview(text: string): string {
+  return text
+    .replaceAll('{{lead.fullName}}', 'Rahul Sharma')
+    .replaceAll('{{lead.firstName}}', 'Rahul')
+    .replaceAll('{{lead.email}}', 'rahul@example.com')
+    .replaceAll('{{lead.phone}}', '+91 90000 00000')
+    .replaceAll('{{lead.city}}', 'Nashik');
+}
+
 function TemplateModal({
   template,
   onClose,
@@ -237,6 +247,7 @@ function TemplateModal({
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -298,15 +309,52 @@ function TemplateModal({
           value={form.subject}
           onChange={(e) => setForm({ ...form, subject: e.target.value })}
         />
-        <textarea
-          className="input min-h-[260px] font-mono text-xs"
-          placeholder="HTML body"
-          required
-          value={form.bodyHtml}
-          onChange={(e) => setForm({ ...form, bodyHtml: e.target.value })}
-        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-500">Email body (HTML)</span>
+          <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5">
+            <button
+              type="button"
+              onClick={() => setShowPreview(false)}
+              className={`rounded px-3 py-1 text-xs font-semibold ${
+                !showPreview ? 'bg-brand text-white' : 'text-slate-500'
+              }`}
+            >
+              Write
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className={`rounded px-3 py-1 text-xs font-semibold ${
+                showPreview ? 'bg-brand text-white' : 'text-slate-500'
+              }`}
+            >
+              Preview
+            </button>
+          </div>
+        </div>
+        {showPreview ? (
+          <div className="min-h-[260px] overflow-auto rounded-lg border border-slate-200 bg-white">
+            <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <span className="text-slate-400">Subject:</span>{' '}
+              <strong className="text-navy-500">
+                {fillPreview(form.subject) || '(no subject)'}
+              </strong>
+            </div>
+            <div
+              className="p-4 text-sm leading-relaxed text-slate-700"
+              dangerouslySetInnerHTML={{ __html: fillPreview(form.bodyHtml) || '<p>Nothing to preview yet.</p>' }}
+            />
+          </div>
+        ) : (
+          <textarea
+            className="input min-h-[260px] font-mono text-xs"
+            placeholder="HTML body"
+            value={form.bodyHtml}
+            onChange={(e) => setForm({ ...form, bodyHtml: e.target.value })}
+          />
+        )}
         <p className="text-xs text-slate-500">
-          Variables: {`{{lead.fullName}}`}, {`{{lead.firstName}}`}, {`{{lead.email}}`}, {`{{lead.phone}}`}, {`{{lead.city}}`}
+          Variables: {`{{lead.fullName}}`}, {`{{lead.firstName}}`}, {`{{lead.email}}`}, {`{{lead.phone}}`}, {`{{lead.city}}`} — Preview fills them with sample data.
         </p>
         {err && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
         <div className="flex justify-end gap-2">
