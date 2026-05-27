@@ -10,6 +10,7 @@ import { env } from './config/env';
 import { logger } from './config/logger';
 import { apiRouter } from './routes';
 import { webhookRoutes } from './routes/webhooks.routes';
+import { publicRoutes } from './routes/public.routes';
 import { errorHandler, notFoundHandler } from './middleware/error';
 
 const app = express();
@@ -23,12 +24,6 @@ app.use(
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-  }),
-);
-app.use(
-  cors({
-    origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean),
-    credentials: true,
   }),
 );
 app.use(compression());
@@ -48,6 +43,21 @@ app.use('/webhooks', webhookRoutes);
 // Everything else: regular JSON
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+/**
+ * PUBLIC endpoints (lead capture from customer websites).
+ * Mounted BEFORE the global CORS + rate limit so any origin can submit
+ * and the per-IP throttle inside publicRoutes is the only gate.
+ */
+app.use('/api/v1/public', cors({ origin: '*' }), publicRoutes);
+
+// Global CORS for authenticated dashboard traffic
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean),
+    credentials: true,
+  }),
+);
 
 // Global rate-limit for the API
 app.use(
