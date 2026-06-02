@@ -34,6 +34,19 @@ interface LeadDetail {
     createdAt: string;
     user: { id: string; name: string } | null;
   }[];
+  customFields?: Record<string, unknown> | null;
+}
+
+interface CustomFieldDef {
+  id: string;
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options: string[] | null;
+  placeholder: string | null;
+  description: string | null;
+  isActive: boolean;
 }
 
 export default function LeadDetailPage() {
@@ -54,6 +67,13 @@ export default function LeadDetailPage() {
       body: noteText,
     });
     setNoteText('');
+    mutate();
+  }
+
+  const { data: fieldDefs } = useSWR<CustomFieldDef[]>('/custom-fields', apiGet);
+
+  async function saveCustomFields(values: Record<string, unknown>) {
+    await apiPatch(`/leads/${params!.id}`, { customFields: values });
     mutate();
   }
 
@@ -145,6 +165,13 @@ export default function LeadDetailPage() {
         </div>
 
         <div className="space-y-5">
+          {fieldDefs && fieldDefs.filter((f) => f.isActive).length > 0 && (
+            <CustomFieldsSection
+              defs={fieldDefs.filter((f) => f.isActive)}
+              values={(data.customFields ?? {}) as Record<string, unknown>}
+              onSave={saveCustomFields}
+            />
+          )}
           <AIAssistant leadId={data.id} onRefresh={mutate} />
 
           {data.aiSummary && (
@@ -168,3 +195,171 @@ export default function LeadDetailPage() {
     </div>
   );
 }
+
+function CustomFieldsSection({
+  defs,
+  values,
+  onSave,
+}: {
+  defs: CustomFieldDef[];
+  values: Record<string, unknown>;
+  onSave: (v: Record<string, unknown>) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Record<string, unknown>>(values);
+  const [saving, setSaving] = useState(false);
+
+  function startEdit() {
+    setDraft({ ...values });
+    setEditing(true);
+  }
+
+  async function commit() {
+    setSaving(true);
+    try {
+      await onSave(draft);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function update(key: string, v: unknown) {
+    setDraft((d) => ({ ...d, [key]: v }));
+  }
+
+  function display(f: CustomFieldDef): string {
+    const v = values[f.key];
+    if (v == null || v === '') return '—';
+    if (f.type === 'BOOLEAN') return v ? 'Yes' : 'No';
+    if (f.type === 'DATE') return String(v).slice(0, 10);
+    return String(v);
+  }
+
+  return (
+    <section className="card p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-navy-500">
+          Custom fields
+        </h3>
+        {!editing ? (
+          <button
+            className="text-xs font-semibold text-brand hover:underline"
+            onClick={startEdit}
+          >
+            Edit
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              className="text-xs font-semibold text-slate-500 hover:underline"
+              onClick={() => setEditing(false)}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              className="text-xs font-semibold text-brand hover:underline"
+              onClick={commit}
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <dl className="space-y-3 text-sm">
+        {defs.map((f) => (
+          <div key={f.id}>
+            <dt className="text-xs font-semibold text-slate-500">
+              {f.label}
+              {f.required && <span className="ml-1 text-red-500">*</span>}
+            </dt>
+            <dd className="mt-1 text-slate-700">
+              {!editing ? (
+                <span className="whitespace-pre-wrap">{display(f)}</span>
+              ) : (
+                <FieldInput
+                  def={f}
+                  value={draft[f.key]}
+                  onChange={(v) => update(f.key, v)}
+                />
+              )}
+              {!editing && f.description && (
+                <div className="mt-0.5 text-[11px] text-slate-400">{f.description}</div>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function FieldInput({
+  def,
+  value,
+  onChange,
+}: {
+  def: CustomFieldDef;
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const v = value == null ? '' : String(value);
+  if (def.type === 'TEXTAREA') {
+    return (
+      <textarea
+        className="input min-h-[80px] text-sm"
+        placeholder={def.placeholder ?? ''}
+        value={v}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+  if (def.type === 'SELECT') {
+    return (
+      <select
+        className="input text-sm"
+        value={v}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">— choose —</option>
+        {(def.options ?? []).map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    );
+  }
+  if (def.type === 'BOOLEAN') {
+    return (
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="h-4 w-4 accent-brand"
+          checked={!!value}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        Yes
+      </label>
+    );
+  }
+  const inputType =
+    def.type === 'NUMBER' ? 'number' :
+    def.type === 'DATE' ? 'date' :
+    def.type === 'URL' ? 'url' :
+    def.type === 'EMAIL' ? 'email' :
+    'text';
+  return (
+    <input
+      type={inputType}
+      className="input text-sm"
+      placeholder={def.placeholder ?? ''}
+      value={v}
+      onChange={(e) =>
+        onChange(def.type === 'NUMBER' && e.target.value !== '' ? Number(e.target.value) : e.target.value)
+      }
+    />
+  );
+}
+

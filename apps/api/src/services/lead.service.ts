@@ -1,4 +1,4 @@
-import { prisma } from '@oneplace/db';
+import { prisma, Prisma } from '@oneplace/db';
 import { Prisma } from '@oneplace/db';
 import type {
   CreateLeadRequest,
@@ -97,6 +97,7 @@ export const LeadService = {
         notes: input.notes,
         budgetInr: input.budgetInr,
         tags: input.tags ?? [],
+        customFields: (input.customFields ?? {}) as Prisma.JsonObject,
       },
     });
     await prisma.leadActivity.create({
@@ -139,6 +140,7 @@ export const LeadService = {
         ...(input.notes !== undefined && { notes: input.notes }),
         ...(input.budgetInr !== undefined && { budgetInr: input.budgetInr }),
         ...(input.tags !== undefined && { tags: input.tags }),
+        ...(input.customFields !== undefined && { customFields: input.customFields as Prisma.JsonObject }),
         ...(input.status !== undefined && { status: input.status }),
         ...(input.priority !== undefined && { priority: input.priority }),
         ...(input.nextFollowUpAt !== undefined && {

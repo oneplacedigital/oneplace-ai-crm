@@ -53,6 +53,7 @@ export const createLeadSchema = z.object({
   notes: z.string().max(5000).optional(),
   budgetInr: z.number().int().nonnegative().optional(),
   tags: z.array(z.string().max(40)).max(20).optional(),
+  customFields: z.record(z.unknown()).optional(),
 });
 
 export const updateLeadSchema = createLeadSchema.partial().extend({

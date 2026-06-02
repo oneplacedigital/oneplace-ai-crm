@@ -15,6 +15,7 @@ import {
   BarChart3,
   Mail,
   Shield,
+  Settings2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-store';
 
@@ -27,6 +28,7 @@ const nav = [
   { href: '/emails', label: 'Emails', icon: Mail },
   { href: '/counselors', label: 'Team', icon: UserCog },
   { href: '/courses', label: 'Courses', icon: GraduationCap },
+  { href: '/custom-fields', label: 'Custom Fields', icon: Settings2 },
   { href: '/integrations', label: 'Integrations', icon: Plug },
 ];
 

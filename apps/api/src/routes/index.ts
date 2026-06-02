@@ -10,6 +10,7 @@ import { analyticsRoutes } from './analytics.routes';
 import { licensesRoutes } from './licenses.routes';
 import { superAdminRoutes } from './super-admin.routes';
 import { emailsRoutes } from './emails.routes';
+import { customFieldsRoutes } from './custom-fields.routes';
 
 export const apiRouter = Router();
 
@@ -28,3 +29,4 @@ apiRouter.use('/analytics', analyticsRoutes);
 apiRouter.use('/licenses', licensesRoutes);
 apiRouter.use('/super-admin', superAdminRoutes);
 apiRouter.use('/emails', emailsRoutes);
+apiRouter.use('/custom-fields', customFieldsRoutes);

@@ -203,6 +203,7 @@ model Tenant {
   emailTemplates  EmailTemplate[]
   emailSends      EmailSend[]
   emailSequences  EmailSequence[]
+  customFieldDefs CustomFieldDefinition[]
 
   @@index([slug])
   @@index([licenseKeyId])
@@ -316,6 +317,8 @@ model Lead {
   nextFollowUpAt  DateTime?
   convertedAt     DateTime?
   lostReason      String?
+  customFields    Json        @default("{}")
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -534,4 +537,29 @@ model EmailSequenceEnrollment {
   @@index([leadId])
   @@index([isActive, currentStep])
   @@map("email_sequence_enrollments")
+}
+
+// --- CUSTOM FIELDS -------------------------------------------------------
+
+model CustomFieldDefinition {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entityType  String   @default("LEAD")
+  key         String
+  label       String
+  type        String   // TEXT, TEXTAREA, NUMBER, DATE, SELECT, BOOLEAN, URL, EMAIL
+  required    Boolean  @default(false)
+  options     Json?
+  placeholder String?
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, entityType, key])
+  @@index([tenantId, entityType, isActive])
+  @@map("custom_field_definitions")
 }
