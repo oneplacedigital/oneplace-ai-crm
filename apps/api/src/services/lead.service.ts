@@ -1,5 +1,4 @@
 import { prisma, Prisma } from '@oneplace/db';
-import { Prisma } from '@oneplace/db';
 import type {
   CreateLeadRequest,
   UpdateLeadRequest,
