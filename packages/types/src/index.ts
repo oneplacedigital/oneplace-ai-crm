@@ -133,6 +133,7 @@ export interface CreateLeadRequest {
   notes?: string;
   budgetInr?: number;
   tags?: string[];
+  customFields?: Record<string, unknown>;
 }
 
 export interface UpdateLeadRequest extends Partial<CreateLeadRequest> {
