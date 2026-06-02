@@ -23,4 +23,6 @@ RUN pnpm --filter @oneplace/api build
 
 ENV NODE_ENV=production
 EXPOSE 4000
-CMD ["node", "apps/api/dist/index.js"]
+
+# Self-apply additive schema changes on startup (idempotent if schema unchanged).
+CMD ["sh", "-c", "cd /repo/packages/db && npx prisma db push --skip-generate && cd /repo && node apps/api/dist/index.js"]
