@@ -37,7 +37,7 @@ const leadCaptureSchema = z.object({
 
 publicRoutes.get('/leads/:tenantSlug', (_req, res) => {
   // Helpful response if someone visits the URL in a browser
-  res.json({ ok: true, message: 'Pipely public lead capture endpoint. POST to submit a lead.' });
+  res.json({ ok: true, message: 'Pipora public lead capture endpoint. POST to submit a lead.' });
 });
 
 publicRoutes.post(
