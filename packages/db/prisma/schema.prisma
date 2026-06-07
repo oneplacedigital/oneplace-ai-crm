@@ -228,6 +228,7 @@ model User {
   assignedLeads Lead[]    @relation("AssignedCounselor")
   activities    LeadActivity[]
   refreshTokens RefreshToken[]
+  resetTokens   PasswordResetToken[]
   auditLogs     AuditLog[]
 
   @@unique([tenantId, email])
@@ -251,6 +252,22 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdById String?   // admin who triggered it (null = self-service)
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model Course {
