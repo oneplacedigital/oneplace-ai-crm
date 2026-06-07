@@ -6,6 +6,7 @@ import { requireAuth, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { env } from '../config/env';
 import { Conflict, NotFound } from '../utils/errors';
+import { PasswordResetService } from '../services/password-reset.service';
 
 export const usersRoutes = Router();
 
@@ -94,6 +95,43 @@ usersRoutes.patch(
         select: { id: true, email: true, name: true, role: true, phone: true, isActive: true },
       });
       res.json(updated);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+const setPasswordSchema = z.object({
+  password: z.string().min(8).max(128),
+});
+
+/** Admin: email a reset link to a teammate + get a shareable link (WhatsApp-able). */
+usersRoutes.post(
+  '/:id/send-reset',
+  requireRole('TENANT_ADMIN'),
+  async (req, res, next) => {
+    try {
+      const result = await PasswordResetService.adminSendReset(
+        req.auth!.tid,
+        req.params.id,
+        req.auth!.sub,
+      );
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/** Admin: directly set a new password for a teammate. */
+usersRoutes.post(
+  '/:id/set-password',
+  requireRole('TENANT_ADMIN'),
+  validate({ body: setPasswordSchema }),
+  async (req, res, next) => {
+    try {
+      await PasswordResetService.adminSetPassword(req.auth!.tid, req.params.id, req.body.password);
+      res.json({ ok: true, message: 'Password updated for this user.' });
     } catch (e) {
       next(e);
     }
