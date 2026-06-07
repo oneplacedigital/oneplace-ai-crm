@@ -30,7 +30,7 @@ async function main() {
       city: 'Nashik',
       country: 'IN',
       plan: TenantPlan.PRO,
-      brandColor: '#DB0000', // OnePlace keeps red - they're a tenant inside Pipely
+      brandColor: '#DB0000', // OnePlace keeps red - they're a tenant inside Pipora
       timezone: 'Asia/Kolkata',
       emailFromAddress: 'noreply@oneplacedigital.com',
       emailFromName: 'OnePlace Digital Academy',
