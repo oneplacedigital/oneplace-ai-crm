@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-store';
 import { ApiError } from '@/lib/api';
+import { PiporaMark } from '@/components/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,9 +28,9 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-screen grid-cols-1 md:grid-cols-2">
-      <aside className="hidden flex-col justify-between bg-pipely-gradient p-12 text-white md:flex">
+      <aside className="hidden flex-col justify-between bg-pipora-gradient p-12 text-white md:flex">
         <div>
-          <div className="text-xs uppercase tracking-widest text-brand-100">Pipely</div>
+          <div className="text-xs uppercase tracking-widest text-brand-100">Pipora</div>
           <div className="mt-2 text-3xl font-bold">Your AI Pipeline.<br/>Built to Convert.</div>
         </div>
         <div className="space-y-4 text-sm text-white/85">
@@ -47,7 +48,8 @@ export default function LoginPage() {
       <section className="flex items-center justify-center bg-white p-6">
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5">
           <div>
-            <h1 className="text-2xl font-bold text-ink-500">Sign in to Pipely</h1>
+            <div className="mb-3"><PiporaMark size={30} /></div>
+            <h1 className="text-2xl font-bold text-ink-500">Sign in to Pipora</h1>
             <p className="text-sm text-slate-500">Access your pipeline workspace</p>
           </div>
 
@@ -67,9 +69,14 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Password
+              </label>
+              <Link href="/forgot-password" className="text-xs font-semibold text-indigo-600 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               required
