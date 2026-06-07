@@ -113,7 +113,7 @@ usersRoutes.post(
     try {
       const result = await PasswordResetService.adminSendReset(
         req.auth!.tid,
-        req.params.id,
+        req.params.id!,
         req.auth!.sub,
       );
       res.json(result);
@@ -130,7 +130,7 @@ usersRoutes.post(
   validate({ body: setPasswordSchema }),
   async (req, res, next) => {
     try {
-      await PasswordResetService.adminSetPassword(req.auth!.tid, req.params.id, req.body.password);
+      await PasswordResetService.adminSetPassword(req.auth!.tid, req.params.id!, req.body.password);
       res.json({ ok: true, message: 'Password updated for this user.' });
     } catch (e) {
       next(e);
