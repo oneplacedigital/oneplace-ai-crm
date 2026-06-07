@@ -39,18 +39,18 @@ const PUBLIC_API_BASE = 'https://oneplace-api.onrender.com';
 
 function buildSnippet(slug: string): string {
   return [
-    '<form id="pipely-lead" style="max-width:380px;font-family:system-ui;display:flex;flex-direction:column;gap:10px">',
+    '<form id="pipora-lead" style="max-width:380px;font-family:system-ui;display:flex;flex-direction:column;gap:10px">',
     '  <input name="fullName" placeholder="Your name" required style="padding:10px;border:1px solid #ccc;border-radius:6px"/>',
     '  <input name="phone" placeholder="Phone (+91...)" required style="padding:10px;border:1px solid #ccc;border-radius:6px"/>',
     '  <input name="email" type="email" placeholder="Email (optional)" style="padding:10px;border:1px solid #ccc;border-radius:6px"/>',
     '  <textarea name="message" placeholder="How can we help?" style="padding:10px;border:1px solid #ccc;border-radius:6px;min-height:80px"></textarea>',
     '  <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true"/>',
     '  <button type="submit" style="background:#DB0000;color:#fff;padding:12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer">Send enquiry</button>',
-    '  <div id="pipely-status" style="font-size:13px;color:#555"></div>',
+    '  <div id="pipora-status" style="font-size:13px;color:#555"></div>',
     '</form>',
     '<script>',
     '(function(){',
-    "  var f=document.getElementById('pipely-lead'),s=document.getElementById('pipely-status');",
+    "  var f=document.getElementById('pipora-lead'),s=document.getElementById('pipora-status');",
     "  f.addEventListener('submit',async function(e){",
     "    e.preventDefault();s.textContent='Sending...';",
     '    var d=Object.fromEntries(new FormData(f).entries());d.sourceDetail=location.href;',
