@@ -17,6 +17,7 @@ import {
   Shield,
   Settings2,
 } from 'lucide-react';
+import { PiporaLogo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth-store';
 
 const nav = [
@@ -42,9 +43,7 @@ export default function Sidebar() {
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-ink-500 text-slate-100">
       <div className="px-6 py-5">
         <div className="text-[10px] uppercase tracking-widest text-brand-300">{user?.tenantName ?? 'Workspace'}</div>
-        <div className="text-lg font-bold leading-tight">
-          Pipely<span className="text-brand">.</span>
-        </div>
+        <PiporaLogo dark markSize={24} />
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
