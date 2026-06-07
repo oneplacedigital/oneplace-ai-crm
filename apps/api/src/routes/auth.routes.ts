@@ -2,7 +2,14 @@ import { Router } from 'express';
 import { AuthService } from '../services/auth.service';
 import { validate } from '../middleware/validate';
 import { requireAuth } from '../middleware/auth';
-import { loginSchema, registerTenantSchema, refreshSchema } from '../validators/auth.validators';
+import {
+  loginSchema,
+  registerTenantSchema,
+  refreshSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../validators/auth.validators';
+import { PasswordResetService } from '../services/password-reset.service';
 
 export const authRoutes = Router();
 
@@ -68,3 +75,30 @@ authRoutes.get('/me', requireAuth, async (req, res, next) => {
     next(e);
   }
 });
+
+authRoutes.post(
+  '/forgot-password',
+  validate({ body: forgotPasswordSchema }),
+  async (req, res, next) => {
+    try {
+      await PasswordResetService.requestReset(req.body.email);
+      // Always 200 — never reveal whether the email exists
+      res.json({ ok: true, message: 'If that email exists, a reset link has been sent.' });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+authRoutes.post(
+  '/reset-password',
+  validate({ body: resetPasswordSchema }),
+  async (req, res, next) => {
+    try {
+      await PasswordResetService.resetWithToken(req.body.token, req.body.password);
+      res.json({ ok: true, message: 'Password updated. You can now sign in.' });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
