@@ -108,7 +108,7 @@ function RegisterForm() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <form onSubmit={onSubmit} className="card w-full max-w-lg space-y-4 p-8">
         <div>
-          <h1 className="text-2xl font-bold text-navy-500">Create your Pipely workspace</h1>
+          <h1 className="text-2xl font-bold text-navy-500">Create your Pipora workspace</h1>
           <p className="text-sm text-slate-500">
             Sign up free. Have a license code? Enter below for premium access. New accounts are
             reviewed before activation.
