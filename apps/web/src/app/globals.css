@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    --brand: #0ea5e9;
-    --brand-dark: #0284c7;
-    --accent: #06b6d4;
-    --ink: #0c4a6e;
+    --brand: #2563eb;
+    --brand-dark: #1d4ed8;
+    --accent: #22d3ee;
+    --ink: #0b1120;
   }
   html,
   body {
@@ -21,7 +21,7 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-gradient {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-pipora-gradient px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-pipely-gradient px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-ink-500 transition hover:bg-slate-100;

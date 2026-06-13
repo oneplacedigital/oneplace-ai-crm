@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Pipora — Your AI Pipeline. Built to Convert.',
+  title: 'Klozent — The AI CRM That Closes For You',
   description:
-    'Pipora is the AI-powered CRM that captures Meta leads, automates WhatsApp + email, and turns conversations into customers. Built for education, coaching, and digital marketing businesses.',
+    'Klozent is the AI-powered CRM that auto-converts leads, automates WhatsApp + email follow-ups, and closes deals on autopilot. Built for fast-growing sales teams worldwide.',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
