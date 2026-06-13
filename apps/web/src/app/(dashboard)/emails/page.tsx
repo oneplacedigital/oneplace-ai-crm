@@ -165,87 +165,6 @@ export default function EmailsPage() {
   );
 }
 
-/** Ready-to-use starter templates — click to prefill the form, then customise. */
-const STARTER_TEMPLATES: { label: string; name: string; subject: string; bodyHtml: string }[] = [
-  {
-    label: 'Welcome',
-    name: 'Welcome - Enquiry Received',
-    subject: 'Thanks for reaching out, {{lead.firstName}}',
-    bodyHtml:
-      '<p>Hi {{lead.firstName}},</p>\n' +
-      "<p>Thanks for getting in touch — we've received your enquiry and a member of our team will reach out to you shortly.</p>\n" +
-      '<p>In the meantime, feel free to reply to this email with any questions you have.</p>\n' +
-      '<p>Best regards,<br/>The Team</p>',
-  },
-  {
-    label: 'Follow-up',
-    name: 'Follow-up - No Response',
-    subject: 'Still interested, {{lead.firstName}}?',
-    bodyHtml:
-      '<p>Hi {{lead.firstName}},</p>\n' +
-      "<p>I tried reaching you earlier and didn't want this to slip through. Are you still looking for help with this?</p>\n" +
-      "<p>Just reply with a good time to talk and I'll make it work.</p>\n" +
-      '<p>Best regards,<br/>The Team</p>',
-  },
-  {
-    label: 'Proposal',
-    name: 'Proposal - Details Sent',
-    subject: 'The details you asked for, {{lead.firstName}}',
-    bodyHtml:
-      '<p>Hi {{lead.firstName}},</p>\n' +
-      '<p>As promised, here is a quick summary of what we discussed:</p>\n' +
-      '<ul><li><strong>What you get:</strong> ...</li><li><strong>Timeline:</strong> ...</li><li><strong>Investment:</strong> ...</li></ul>\n' +
-      '<p>Happy to jump on a short call to walk you through it. When works best for you?</p>\n' +
-      '<p>Best regards,<br/>The Team</p>',
-  },
-  {
-    label: 'Re-engage',
-    name: 'Re-engagement - Cold Lead',
-    subject: 'Should I close your file, {{lead.firstName}}?',
-    bodyHtml:
-      '<p>Hi {{lead.firstName}},</p>\n' +
-      "<p>I haven't heard back, so I wanted to check in one last time before closing things on my end.</p>\n" +
-      "<p>If now isn't the right time, no problem at all — just let me know and I'll follow up later. If you're ready, reply here and we'll pick up where we left off.</p>\n" +
-      '<p>Best regards,<br/>The Team</p>',
-  },
-  {
-    label: 'Thank You',
-    name: 'Thank You - Welcome Aboard',
-    subject: 'Welcome aboard, {{lead.firstName}}!',
-    bodyHtml:
-      '<p>Hi {{lead.firstName}},</p>\n' +
-      "<p>Thank you for choosing to work with us — we're glad to have you on board.</p>\n" +
-      '<p>Our team will be in touch within one working day to get you started.</p>\n' +
-      '<p>If you need anything at all, just reply to this email.</p>\n' +
-      '<p>Best regards,<br/>The Team</p>',
-  },
-];
-
-/** Replace {{lead.*}} variables with sample values so the user can preview the email. */
-function fillPreview(text: string): string {
-  return text
-    .replaceAll('{{lead.fullName}}', 'Rahul Sharma')
-    .replaceAll('{{lead.firstName}}', 'Rahul')
-    .replaceAll('{{lead.email}}', 'rahul@example.com')
-    .replaceAll('{{lead.phone}}', '+91 90000 00000')
-    .replaceAll('{{lead.city}}', 'Nashik');
-}
-
-/** Header-image block markers — round-trip a header image without a DB column. */
-const HEADER_RE = /^<!--PIPELY_HEADER-->[\s\S]*?<!--\/PIPELY_HEADER-->\n?/;
-function buildHeaderHtml(url: string): string {
-  return `<!--PIPELY_HEADER--><img src="${url}" alt="" style="display:block;width:100%;max-width:600px;margin:0 auto" /><!--/PIPELY_HEADER-->\n`;
-}
-function extractHeader(html: string): { headerUrl: string; body: string } {
-  const m = html.match(HEADER_RE);
-  if (!m) return { headerUrl: '', body: html };
-  const src = m[0].match(/src="([^"]*)"/);
-  return { headerUrl: src?.[1] ?? '', body: html.replace(HEADER_RE, '') };
-}
-function composeBody(headerUrl: string, body: string): string {
-  return (headerUrl.trim() ? buildHeaderHtml(headerUrl.trim()) : '') + body;
-}
-
 function TemplateModal({
   template,
   onClose,
@@ -255,31 +174,26 @@ function TemplateModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const initial = extractHeader(template?.bodyHtml ?? STARTER_TEMPLATES[0]!.bodyHtml);
   const [form, setForm] = useState({
     name: template?.name ?? '',
-    subject: template?.subject ?? STARTER_TEMPLATES[0]!.subject,
-    headerImage: initial.headerUrl,
-    bodyHtml: initial.body,
+    subject: template?.subject ?? 'Welcome to {{lead.firstName}}!',
+    bodyHtml: template?.bodyHtml ?? `<p>Hi {{lead.firstName}},</p>
+<p>Thanks for your interest — we'd love to show you how we can help.</p>
+<p>Reply to this email or message us on WhatsApp to schedule your demo.</p>
+<p>Best,<br/>The Team</p>`,
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setErr(null);
     try {
-      const payload = {
-        name: form.name,
-        subject: form.subject,
-        bodyHtml: composeBody(form.headerImage, form.bodyHtml),
-      };
       if (template) {
-        await apiPost(`/emails/templates/${template.id}`, payload);
+        await apiPost(`/emails/templates/${template.id}`, form);
       } else {
-        await apiPost('/emails/templates', payload);
+        await apiPost('/emails/templates', form);
       }
       onSaved();
       onClose();
@@ -296,32 +210,6 @@ function TemplateModal({
         <h3 className="text-lg font-bold text-navy-500">
           {template ? 'Edit Template' : 'New Email Template'}
         </h3>
-        {!template && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="mb-2 text-xs font-semibold text-slate-500">
-              Start from a ready-made template:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {STARTER_TEMPLATES.map((st) => (
-                <button
-                  key={st.label}
-                  type="button"
-                  className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-navy-500 hover:border-brand hover:text-brand"
-                  onClick={() =>
-                    setForm((curr) => ({
-                      ...curr,
-                      name: st.name,
-                      subject: st.subject,
-                      bodyHtml: st.bodyHtml,
-                    }))
-                  }
-                >
-                  {st.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
         <input
           className="input"
           placeholder="Template name (internal)"
@@ -336,79 +224,15 @@ function TemplateModal({
           value={form.subject}
           onChange={(e) => setForm({ ...form, subject: e.target.value })}
         />
-        <div>
-          <label className="text-xs font-semibold text-slate-500">
-            Header image URL (optional)
-          </label>
-          <input
-            className="input"
-            placeholder="https://your-site.com/email-banner.jpg"
-            value={form.headerImage}
-            onChange={(e) => setForm({ ...form, headerImage: e.target.value })}
-          />
-          <p className="mt-1 text-xs text-slate-500">
-            Shown as a banner at the top of the email. Paste a hosted image link (JPG/PNG),
-            ideally 600px wide.
-          </p>
-          {form.headerImage.trim() && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={form.headerImage.trim()}
-              alt="Header preview"
-              className="mt-2 max-h-28 rounded border border-slate-200"
-            />
-          )}
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500">Email body (HTML)</span>
-          <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5">
-            <button
-              type="button"
-              onClick={() => setShowPreview(false)}
-              className={`rounded px-3 py-1 text-xs font-semibold ${
-                !showPreview ? 'bg-brand text-white' : 'text-slate-500'
-              }`}
-            >
-              Write
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPreview(true)}
-              className={`rounded px-3 py-1 text-xs font-semibold ${
-                showPreview ? 'bg-brand text-white' : 'text-slate-500'
-              }`}
-            >
-              Preview
-            </button>
-          </div>
-        </div>
-        {showPreview ? (
-          <div className="min-h-[260px] overflow-auto rounded-lg border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              <span className="text-slate-400">Subject:</span>{' '}
-              <strong className="text-navy-500">
-                {fillPreview(form.subject) || '(no subject)'}
-              </strong>
-            </div>
-            <div
-              className="p-4 text-sm leading-relaxed text-slate-700"
-              dangerouslySetInnerHTML={{
-                __html:
-                  fillPreview(composeBody(form.headerImage, form.bodyHtml)) ||
-                  '<p>Nothing to preview yet.</p>',
-              }}
-            />
-          </div>
-        ) : (
-          <textarea
-            className="input min-h-[260px] font-mono text-xs"
-            placeholder="HTML body"
-            value={form.bodyHtml}
-            onChange={(e) => setForm({ ...form, bodyHtml: e.target.value })}
-          />
-        )}
+        <textarea
+          className="input min-h-[260px] font-mono text-xs"
+          placeholder="HTML body"
+          required
+          value={form.bodyHtml}
+          onChange={(e) => setForm({ ...form, bodyHtml: e.target.value })}
+        />
         <p className="text-xs text-slate-500">
-          Variables: {`{{lead.fullName}}`}, {`{{lead.firstName}}`}, {`{{lead.email}}`}, {`{{lead.phone}}`}, {`{{lead.city}}`} — Preview fills them with sample data.
+          Variables: {`{{lead.fullName}}`}, {`{{lead.firstName}}`}, {`{{lead.email}}`}, {`{{lead.phone}}`}, {`{{lead.city}}`}
         </p>
         {err && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
         <div className="flex justify-end gap-2">
