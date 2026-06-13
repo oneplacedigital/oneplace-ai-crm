@@ -108,7 +108,7 @@ function RegisterForm() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <form onSubmit={onSubmit} className="card w-full max-w-lg space-y-4 p-8">
         <div>
-          <h1 className="text-2xl font-bold text-navy-500">Create your Pipora workspace</h1>
+          <h1 className="text-2xl font-bold text-navy-500">Create your Klozent workspace</h1>
           <p className="text-sm text-slate-500">
             Sign up free. Have a license code? Enter below for premium access. New accounts are
             reviewed before activation.
@@ -119,7 +119,7 @@ function RegisterForm() {
           <label className="text-xs font-semibold text-slate-500">License Code (optional)</label>
           <input
             className="input font-mono"
-            placeholder="e.g. ONEPLACE-MAY-2026"
+            placeholder="e.g. KLOZENT-2026"
             value={form.licenseCode}
             onChange={update('licenseCode')}
           />
