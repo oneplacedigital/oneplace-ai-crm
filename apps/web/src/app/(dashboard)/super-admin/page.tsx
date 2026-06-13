@@ -390,7 +390,7 @@ function NewLicenseModal({ onClose, onCreated }: { onClose: () => void; onCreate
         </div>
         <input
           className="input"
-          placeholder="Custom code (optional, e.g. ONEPLACE-MAY-2026)"
+          placeholder="Custom code (optional, e.g. KLOZENT-2026)"
           value={form.customCode}
           onChange={(e) => setForm({ ...form, customCode: e.target.value })}
         />
