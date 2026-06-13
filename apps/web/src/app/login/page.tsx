@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-store';
 import { ApiError } from '@/lib/api';
-import { PiporaMark } from '@/components/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,18 +27,18 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-screen grid-cols-1 md:grid-cols-2">
-      <aside className="hidden flex-col justify-between bg-pipora-gradient p-12 text-white md:flex">
+      <aside className="hidden flex-col justify-between bg-pipely-gradient p-12 text-white md:flex">
         <div>
-          <div className="text-xs uppercase tracking-widest text-brand-100">Pipora</div>
-          <div className="mt-2 text-3xl font-bold">Your AI Pipeline.<br/>Built to Convert.</div>
+          <div className="text-xs uppercase tracking-widest text-brand-100">Klozent</div>
+          <div className="mt-2 text-3xl font-bold">The AI CRM that<br/>closes for you.</div>
         </div>
         <div className="space-y-4 text-sm text-white/85">
-          <p>"From Meta Lead to Paying Customer — fully automated."</p>
+          <p>"From fresh lead to closed deal — fully automated."</p>
           <ul className="space-y-2">
-            <li>✓ AI lead qualification & scoring</li>
+            <li>✓ Auto lead conversion & AI scoring</li>
             <li>✓ WhatsApp + Email automation</li>
-            <li>✓ Meta Conversion API on every status change</li>
-            <li>✓ Counselor performance dashboards</li>
+            <li>✓ Lead-conversion API on every status change</li>
+            <li>✓ Team performance dashboards</li>
             <li>✓ Multi-workspace with license keys</li>
           </ul>
         </div>
@@ -48,8 +47,7 @@ export default function LoginPage() {
       <section className="flex items-center justify-center bg-white p-6">
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5">
           <div>
-            <div className="mb-3"><PiporaMark size={30} /></div>
-            <h1 className="text-2xl font-bold text-ink-500">Sign in to Pipora</h1>
+            <h1 className="text-2xl font-bold text-ink-500">Sign in to Klozent</h1>
             <p className="text-sm text-slate-500">Access your pipeline workspace</p>
           </div>
 
@@ -69,14 +67,9 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Password
-              </label>
-              <Link href="/forgot-password" className="text-xs font-semibold text-indigo-600 hover:underline">
-                Forgot password?
-              </Link>
-            </div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Password
+            </label>
             <input
               type="password"
               required
