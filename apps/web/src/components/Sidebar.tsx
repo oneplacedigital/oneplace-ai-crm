@@ -15,9 +15,7 @@ import {
   BarChart3,
   Mail,
   Shield,
-  Settings2,
 } from 'lucide-react';
-import { PiporaLogo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth-store';
 
 const nav = [
@@ -29,7 +27,6 @@ const nav = [
   { href: '/emails', label: 'Emails', icon: Mail },
   { href: '/counselors', label: 'Team', icon: UserCog },
   { href: '/courses', label: 'Courses', icon: GraduationCap },
-  { href: '/custom-fields', label: 'Custom Fields', icon: Settings2 },
   { href: '/integrations', label: 'Integrations', icon: Plug },
 ];
 
@@ -42,8 +39,20 @@ export default function Sidebar() {
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-ink-500 text-slate-100">
       <div className="px-6 py-5">
+        <div className="mb-2 flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-klozent-gradient">
+            <svg width="22" height="22" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+              <g stroke="#fff" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="42" y1="34" x2="42" y2="86" />
+                <line x1="42" y1="62" x2="80" y2="34" />
+                <line x1="42" y1="58" x2="80" y2="86" />
+              </g>
+              <path d="M90 30 L93.5 38 L101.5 41.5 L93.5 45 L90 53 L86.5 45 L78.5 41.5 L86.5 38 Z" fill="#fff" />
+            </svg>
+          </span>
+          <span className="text-lg font-bold leading-tight text-white">Klozent</span>
+        </div>
         <div className="text-[10px] uppercase tracking-widest text-brand-300">{user?.tenantName ?? 'Workspace'}</div>
-        <PiporaLogo dark markSize={24} />
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
