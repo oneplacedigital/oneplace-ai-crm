@@ -17,22 +17,26 @@ import { EmailService } from './email.service';
 
 const TOKEN_TTL_MINUTES = 60;
 
+// System sender for auth emails — must be on a Resend-verified domain (klozent.ai).
+const SYSTEM_FROM_ADDRESS = 'noreply@klozent.ai';
+const SYSTEM_FROM_NAME = 'Klozent';
+
 const hashToken = (raw: string) => crypto.createHash('sha256').update(raw).digest('hex');
 
 function webBaseUrl(): string {
   const origin = (env.CORS_ORIGIN || '').split(',')[0]?.trim();
   if (origin && origin.startsWith('http')) return origin.replace(/\/$/, '');
-  return 'https://pipely-saas.vercel.app';
+  return 'https://app.klozent.ai';
 }
 
 function resetEmailHtml(name: string, url: string): string {
   return [
     '<div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px">',
-    '<h2 style="color:#1E1B4B;margin:0 0 8px">Reset your Pipora password</h2>',
+    '<h2 style="color:#0B1120;margin:0 0 8px">Reset your Klozent password</h2>',
     `<p style="color:#475569;font-size:15px;line-height:1.6">Hi ${name},</p>`,
     '<p style="color:#475569;font-size:15px;line-height:1.6">We received a request to reset your password. Click the button below to choose a new one. This link is valid for 60 minutes and can be used once.</p>',
-    `<p style="margin:28px 0"><a href="${url}" style="background:#6366F1;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;display:inline-block">Reset password</a></p>`,
-    `<p style="color:#94A3B8;font-size:13px;line-height:1.6">If the button does not work, copy this link into your browser:<br/><a href="${url}" style="color:#6366F1;word-break:break-all">${url}</a></p>`,
+    `<p style="margin:28px 0"><a href="${url}" style="background:#2563EB;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;display:inline-block">Reset password</a></p>`,
+    `<p style="color:#94A3B8;font-size:13px;line-height:1.6">If the button does not work, copy this link into your browser:<br/><a href="${url}" style="color:#2563EB;word-break:break-all">${url}</a></p>`,
     '<p style="color:#94A3B8;font-size:13px">If you did not request this, you can safely ignore this email — your password will not change.</p>',
     '</div>',
   ].join('');
@@ -67,8 +71,10 @@ export const PasswordResetService = {
         await EmailService.send({
           tenantId: user.tenantId,
           toEmail: user.email,
-          subject: 'Reset your Pipora password',
+          subject: 'Reset your Klozent password',
           bodyHtml: resetEmailHtml(user.name, url),
+          fromAddress: SYSTEM_FROM_ADDRESS,
+          fromName: SYSTEM_FROM_NAME,
         });
       } catch (err) {
         logger.error({ err, userId: user.id }, 'Failed to send reset email');
@@ -115,8 +121,10 @@ export const PasswordResetService = {
       const result = await EmailService.send({
         tenantId: user.tenantId,
         toEmail: user.email,
-        subject: 'Reset your Pipora password',
+        subject: 'Reset your Klozent password',
         bodyHtml: resetEmailHtml(user.name, resetUrl),
+        fromAddress: SYSTEM_FROM_ADDRESS,
+        fromName: SYSTEM_FROM_NAME,
       });
       emailed = Boolean((result as { sent?: boolean })?.sent);
     } catch (err) {
