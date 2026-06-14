@@ -109,7 +109,7 @@ export default function ResetPasswordPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <div className="card w-full max-w-sm space-y-5 p-8">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-indigo-500">Pipora</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-brand">Klozent</div>
           <h1 className="mt-1 text-2xl font-bold text-navy-500">Choose a new password</h1>
         </div>
         <Suspense fallback={<div className="text-sm text-slate-500">Loading…</div>}>
