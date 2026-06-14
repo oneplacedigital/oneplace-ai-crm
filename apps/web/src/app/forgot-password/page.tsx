@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <div className="card w-full max-w-sm space-y-5 p-8">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-indigo-500">Pipora</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-brand">Klozent</div>
           <h1 className="mt-1 text-2xl font-bold text-navy-500">Forgot your password?</h1>
           <p className="mt-1 text-sm text-slate-500">
             Enter your account email and we&apos;ll send you a secure reset link.
@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
             </button>
             <p className="text-center text-sm text-slate-500">
               Remembered it?{' '}
-              <Link href="/login" className="font-semibold text-indigo-600 hover:underline">
+              <Link href="/login" className="font-semibold text-brand hover:underline">
                 Sign in
               </Link>
             </p>
