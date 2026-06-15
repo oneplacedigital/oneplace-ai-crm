@@ -54,6 +54,7 @@ export default function SuperAdminPage() {
   const { data: licenses, mutate: mutateLicenses } = useSWR<License[]>('/licenses', apiGet);
   const [tab, setTab] = useState<'tenants' | 'licenses'>('tenants');
   const [showNewLicense, setShowNewLicense] = useState(false);
+  const [grantFor, setGrantFor] = useState<Tenant | null>(null);
 
   const pendingCount = tenants?.filter((t) => t.approvalStatus === 'PENDING').length ?? 0;
 
@@ -134,6 +135,7 @@ export default function SuperAdminPage() {
                 <th className="px-4 py-3">Plan</th>
                 <th className="px-4 py-3">License</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Access</th>
                 <th className="px-4 py-3">Stats</th>
                 <th className="px-4 py-3">Joined</th>
                 <th className="px-4 py-3"></th>
@@ -177,6 +179,12 @@ export default function SuperAdminPage() {
                       <span className="badge bg-slate-100 text-slate-500">Inactive</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-xs">
+                    {(() => {
+                      const a = accessInfo(t);
+                      return <span className={a.cls}>{a.label}</span>;
+                    })()}
+                  </td>
                   <td className="px-4 py-3 text-xs text-slate-600">
                     {t.stats.users}u · {t.stats.leads}l · {t.stats.emailSends}e
                   </td>
@@ -204,20 +212,30 @@ export default function SuperAdminPage() {
                       >
                         <CheckCircle2 size={12} /> Approve
                       </button>
-                    ) : t.isSuspended ? (
-                      <button
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline"
-                        onClick={() => activate(t.id)}
-                      >
-                        <Power size={12} /> Activate
-                      </button>
                     ) : (
-                      <button
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
-                        onClick={() => suspend(t.id, t.name)}
-                      >
-                        <Ban size={12} /> Suspend
-                      </button>
+                      <div className="flex justify-end gap-3">
+                        <button
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+                          onClick={() => setGrantFor(t)}
+                        >
+                          <KeyRound size={12} /> Grant access
+                        </button>
+                        {t.isSuspended ? (
+                          <button
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline"
+                            onClick={() => activate(t.id)}
+                          >
+                            <Power size={12} /> Activate
+                          </button>
+                        ) : (
+                          <button
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
+                            onClick={() => suspend(t.id, t.name)}
+                          >
+                            <Ban size={12} /> Suspend
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -282,6 +300,126 @@ export default function SuperAdminPage() {
       {showNewLicense && (
         <NewLicenseModal onClose={() => setShowNewLicense(false)} onCreated={() => mutateLicenses()} />
       )}
+
+      {grantFor && (
+        <GrantAccessModal
+          tenant={grantFor}
+          onClose={() => setGrantFor(null)}
+          onDone={() => {
+            setGrantFor(null);
+            mutateTenants();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function accessInfo(t: Tenant): { label: string; cls: string } {
+  const ends = [t.licenseExpiresAt, t.trialEndsAt]
+    .filter(Boolean)
+    .map((d) => new Date(d as string).getTime());
+  if (!ends.length) return { label: '—', cls: 'text-slate-400' };
+  const days = Math.ceil((Math.max(...ends) - Date.now()) / 86_400_000);
+  if (days < 0) return { label: 'Expired', cls: 'font-semibold text-red-600' };
+  if (days === 0) return { label: 'Ends today', cls: 'font-semibold text-red-600' };
+  if (days <= 7) return { label: `${days}d left`, cls: 'font-semibold text-amber-600' };
+  return { label: `${days}d left`, cls: 'text-emerald-600' };
+}
+
+function GrantAccessModal({
+  tenant,
+  onClose,
+  onDone,
+}: {
+  tenant: Tenant;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [days, setDays] = useState<number>(180);
+  const [customDays, setCustomDays] = useState<number>(30);
+  const [plan, setPlan] = useState<string>(tenant.plan === 'TRIAL' ? 'PRO' : tenant.plan);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const current = accessInfo(tenant);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setErr(null);
+    try {
+      const extendDays = days === -1 ? customDays : days;
+      await apiPost(`/super-admin/tenants/${tenant.id}/plan`, { plan, extendDays });
+      onDone();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to grant access');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/40 p-4">
+      <form onSubmit={submit} className="card w-full max-w-md space-y-3 p-6">
+        <h3 className="text-lg font-bold text-navy-500">Grant access</h3>
+        <p className="text-sm text-slate-500">
+          <span className="font-semibold text-navy-500">{tenant.name}</span> — current access:{' '}
+          <span className={current.cls}>{current.label}</span>
+        </p>
+
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Access duration (from today)</label>
+          <select
+            className="input"
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+          >
+            <option value={14}>14 days (extend trial)</option>
+            <option value={30}>1 month</option>
+            <option value={90}>3 months</option>
+            <option value={180}>6 months</option>
+            <option value={365}>1 year</option>
+            <option value={-1}>Custom…</option>
+          </select>
+        </div>
+
+        {days === -1 && (
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Custom days</label>
+            <input
+              type="number"
+              className="input"
+              min={1}
+              max={3650}
+              value={customDays}
+              onChange={(e) => setCustomDays(Number(e.target.value))}
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Plan</label>
+          <select className="input" value={plan} onChange={(e) => setPlan(e.target.value)}>
+            <option value="STARTER">Starter</option>
+            <option value="GROWTH">Growth</option>
+            <option value="PRO">Pro</option>
+            <option value="ENTERPRISE">Enterprise</option>
+            <option value="TRIAL">Trial</option>
+          </select>
+        </div>
+
+        {err && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
+
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn-primary" disabled={saving}>
+            {saving ? 'Granting…' : 'Grant access'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
