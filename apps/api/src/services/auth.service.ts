@@ -55,6 +55,19 @@ export const AuthService = {
       throw Unauthorized(`Account suspended: ${user.tenant.suspendedReason ?? 'contact support'}`);
     }
 
+    // Access window — the trial or a paid license must still be current.
+    // Platform super admins are always exempt so the owner can never be locked out.
+    if (user.role !== 'SUPER_ADMIN') {
+      const now = new Date();
+      const licenseOk = user.tenant.licenseExpiresAt != null && user.tenant.licenseExpiresAt > now;
+      const trialOk = user.tenant.trialEndsAt != null && user.tenant.trialEndsAt > now;
+      if (!licenseOk && !trialOk) {
+        throw Unauthorized(
+          'Your access has ended. Please contact your administrator to renew your subscription.',
+        );
+      }
+    }
+
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
     const accessToken = signAccessToken({
