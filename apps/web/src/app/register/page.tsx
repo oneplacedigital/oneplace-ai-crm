@@ -19,7 +19,6 @@ function RegisterForm() {
   const params = useSearchParams();
   const [form, setForm] = useState({
     tenantName: '',
-    tenantSlug: '',
     adminName: '',
     adminEmail: '',
     adminPhone: '',
@@ -73,9 +72,18 @@ function RegisterForm() {
     setLoading(true);
     setError(null);
     try {
+      // Slug is an internal id (never shown in a URL), so we auto-generate it from the
+      // business name plus a short random suffix to guarantee uniqueness — no field for the user.
+      const baseSlug =
+        form.tenantName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 32) || 'workspace';
+      const tenantSlug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
       const res = await apiPost<{ pending: boolean; message: string }>('/auth/register-tenant', {
         ...form,
-        tenantSlug: form.tenantSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+        tenantSlug,
         licenseCode: form.licenseCode || undefined,
       });
       setSubmitted(
@@ -141,27 +149,15 @@ function RegisterForm() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-slate-500">Business / Workspace Name</label>
-            <input
-              className="input"
-              required
-              placeholder="e.g. Acme Marketing"
-              value={form.tenantName}
-              onChange={update('tenantName')}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500">URL Slug</label>
-            <input
-              className="input"
-              required
-              placeholder="acme-marketing"
-              value={form.tenantSlug}
-              onChange={update('tenantSlug')}
-            />
-          </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Business / Workspace Name</label>
+          <input
+            className="input"
+            required
+            placeholder="e.g. Acme Marketing"
+            value={form.tenantName}
+            onChange={update('tenantName')}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
