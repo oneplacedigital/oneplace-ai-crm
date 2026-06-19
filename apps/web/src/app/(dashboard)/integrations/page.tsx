@@ -7,7 +7,12 @@ import { Plug, ShieldCheck, AlertTriangle, Code, Copy } from 'lucide-react';
 
 interface Status {
   meta: { configured: boolean; pixelId: string | null; adAccountId: string | null; tokenSet: boolean };
-  whatsapp: { configured: boolean; phoneNumberId: string | null; businessAccountId: string | null; tokenSet: boolean };
+  whatsapp: {
+    configured: boolean;
+    phoneNumberId: string | null;
+    businessAccountId: string | null;
+    tokenSet: boolean;
+  };
 }
 
 interface Me {
@@ -28,9 +33,9 @@ export default function IntegrationsPage() {
         </p>
       </div>
 
-      <WebsiteFormCard slug={me?.tenantSlug ?? ''} />
       <MetaCard status={data?.meta} onSaved={() => mutate()} />
       <WhatsAppCard status={data?.whatsapp} onSaved={() => mutate()} />
+      <WebsiteFormCard slug={me?.tenantSlug ?? ''} />
     </div>
   );
 }
@@ -39,18 +44,18 @@ const PUBLIC_API_BASE = 'https://oneplace-api.onrender.com';
 
 function buildSnippet(slug: string): string {
   return [
-    '<form id="pipora-lead" style="max-width:380px;font-family:system-ui;display:flex;flex-direction:column;gap:10px">',
+    '<form id="klozent-lead" style="max-width:380px;font-family:system-ui;display:flex;flex-direction:column;gap:10px">',
     '  <input name="fullName" placeholder="Your name" required style="padding:10px;border:1px solid #ccc;border-radius:6px"/>',
     '  <input name="phone" placeholder="Phone (+91...)" required style="padding:10px;border:1px solid #ccc;border-radius:6px"/>',
     '  <input name="email" type="email" placeholder="Email (optional)" style="padding:10px;border:1px solid #ccc;border-radius:6px"/>',
     '  <textarea name="message" placeholder="How can we help?" style="padding:10px;border:1px solid #ccc;border-radius:6px;min-height:80px"></textarea>',
     '  <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true"/>',
-    '  <button type="submit" style="background:#DB0000;color:#fff;padding:12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer">Send enquiry</button>',
-    '  <div id="pipora-status" style="font-size:13px;color:#555"></div>',
+    '  <button type="submit" style="background:#2563EB;color:#fff;padding:12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer">Send enquiry</button>',
+    '  <div id="klozent-status" style="font-size:13px;color:#555"></div>',
     '</form>',
     '<script>',
     '(function(){',
-    "  var f=document.getElementById('pipora-lead'),s=document.getElementById('pipora-status');",
+    "  var f=document.getElementById('klozent-lead'),s=document.getElementById('klozent-status');",
     "  f.addEventListener('submit',async function(e){",
     "    e.preventDefault();s.textContent='Sending...';",
     '    var d=Object.fromEntries(new FormData(f).entries());d.sourceDetail=location.href;',
@@ -290,7 +295,12 @@ function MetaCard({ status, onSaved }: { status?: Status['meta']; onSaved: () =>
         <div className="font-semibold text-navy-500">Webhook setup</div>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>In Meta App → Webhooks → Add "page" subscription</li>
-          <li>Callback URL: <code className="rounded bg-white px-1">https://YOUR-API/webhooks/meta/leads</code></li>
+          <li>
+            Callback URL:{' '}
+            <code className="rounded bg-white px-1">
+              https://oneplace-api.onrender.com/api/v1/webhooks/meta/leads
+            </code>
+          </li>
           <li>Verify Token: value of <code>META_VERIFY_TOKEN</code> env var</li>
           <li>Subscribe to <code>leadgen</code> field</li>
         </ol>
@@ -433,7 +443,12 @@ function WhatsAppCard({ status, onSaved }: { status?: Status['whatsapp']; onSave
         <div className="font-semibold text-navy-500">Webhook setup</div>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>WhatsApp Manager → Configuration → Webhook</li>
-          <li>Callback URL: <code className="rounded bg-white px-1">https://YOUR-API/webhooks/whatsapp</code></li>
+          <li>
+            Callback URL:{' '}
+            <code className="rounded bg-white px-1">
+              https://oneplace-api.onrender.com/api/v1/webhooks/whatsapp
+            </code>
+          </li>
           <li>Verify Token: value of <code>WHATSAPP_VERIFY_TOKEN</code> env var</li>
           <li>Subscribe to <code>messages</code> field</li>
         </ol>
